@@ -1,0 +1,13 @@
+# Ignore all venv directories
+**/venv/
+
+# Ignore all __pycache__ directories
+**/__pycache__/
+
+# Ignore PyCharm project files
+*.idea/
+*.iml
+*.db
+
+# Ignore all client_secret.json files
+**/client_secret.json

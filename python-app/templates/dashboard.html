@@ -1,0 +1,26 @@
+<!-- templates/dashboard.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+</head>
+<body>
+    <h1>Welcome {{ user.name }}!</h1>
+    <p>Email: {{ user.email }}</p>
+
+    <h2>Your Registered Account Addresses:</h2>
+    <ul>
+        {% for address in account_addresses %}
+            <li>{{ address.address }}</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Add a new account address:</h2>
+    <form action="/add_account" method="post">
+        <input type="text" name="account_address" placeholder="Enter account address" required>
+        <button type="submit">Add Account</button>
+    </form>
+
+    <a href="/accounts">View Accounts</a>
+</body>
+</html>
