@@ -1,0 +1,11 @@
+# needs to be pubnet ledger metadata, example is config'd for that network.
+
+type = "GCS"
+
+[params]
+destination_bucket_path = "sdf-ledger-close-meta/ledgers/pubnet"
+
+[schema]
+ledgers_per_file = 1
+files_per_partition = 64000
+
