@@ -63,11 +63,11 @@ func NewRegistrationService() RegistrationService {
 
 // Application models
 type FraudEvent struct {
-  AppUserId string
+	AppUserId string
 	AccountId string
-	TxHash        string
-	Timestamp     uint
-	Type          string
+	TxHash    string
+	Timestamp uint
+	Type      string
 }
 
 // application data pipeline
@@ -96,7 +96,7 @@ func (adapter *KafkaOutboundAdapter) Process(ctx context.Context, msg Message) e
 type FraudDetectionTransformer struct {
 	processors            []Processor
 	fraudDetectionService FraudDetectionService
-  registrationService   RegistrationService
+	registrationService   RegistrationService
 	networkPassPhrase     string
 }
 
@@ -122,27 +122,27 @@ func (transformer *FraudDetectionTransformer) Process(ctx context.Context, msg M
 	for ; err == nil; transaction, err = ledgerTxReader.Read() {
 		accountId := transaction.Envelope.SourceAccount().ToAccountId().Address()
 		if fraudDetected, ok := fraudulentAccounts[accountId]; ok {
-      registeredAppWatchers, err := transformer.registrationService.GetRegistrationsForAccount(accountId)
-      if err != nil {
-        return err
-      }
-      for _, registeredAppUserId := range registeredAppWatchers { 
-        fraudEvent := FraudEvent{
-          AppUserId: registeredAppUserId,
-          AccountId: accountId,
-          TxHash:        transaction.Result.TransactionHash.HexString(),
-          Timestamp:     closeTime,
-          Type:          fraudDetected.FraudType,
-        }
-        jsonBytes, err := json.Marshal(fraudEvent)
-        if err != nil {
-          return err
-        }
+			registeredAppWatchers, err := transformer.registrationService.GetRegistrationsForAccount(accountId)
+			if err != nil {
+				return err
+			}
+			for _, registeredAppUserId := range registeredAppWatchers {
+				fraudEvent := FraudEvent{
+					AppUserId: registeredAppUserId,
+					AccountId: accountId,
+					TxHash:    transaction.Result.TransactionHash.HexString(),
+					Timestamp: closeTime,
+					Type:      fraudDetected.FraudType,
+				}
+				jsonBytes, err := json.Marshal(fraudEvent)
+				if err != nil {
+					return err
+				}
 
-        for _, processor := range transformer.processors {
-          processor.Process(ctx, Message{Payload: jsonBytes})
-        }
-      }
+				for _, processor := range transformer.processors {
+					processor.Process(ctx, Message{Payload: jsonBytes})
+				}
+			}
 		}
 	}
 
@@ -232,7 +232,7 @@ func main() {
 	fraudDetectionTransformer := &FraudDetectionTransformer{
 		networkPassPhrase:     network.PublicNetworkPassphrase,
 		fraudDetectionService: NewFraudDetectionService(),
-    registrationService:   NewRegistrationService(),
+		registrationService:   NewRegistrationService(),
 	}
 
 	// create the outbound adapter, this is the end point of the pipeline
