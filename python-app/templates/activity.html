@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activity Page</title>
+    <style>
+        pre {
+            white-space: pre-wrap; /* Preserve whitespace */
+            word-wrap: break-word; /* Allow wrapping */
+            background-color: #f4f4f4; /* Light gray background */
+            padding: 10px; /* Add some padding */
+            border-radius: 5px; /* Rounded corners */
+            border: 1px solid #ccc; /* Light border */
+            display: none; /* Initially hidden */
+            margin-top: 5px; /* Space between the button and JSON */
+        }
+        .toggle {
+            cursor: pointer; /* Change cursor to pointer */
+            color: blue; /* Change color to indicate clickable */
+            text-decoration: underline; /* Underline text */
+            padding-right: 5px; /* Add spacing after the toggle */
+        }
+        .activity-item {
+            margin-bottom: 10px; /* Add space between activity items */
+            padding-left: 15px; /* Add left padding to align text */
+        }
+    </style>
+</head>
+<body>
+    <h1>Activity List</h1>
+
+    {% for activity in activities %}
+        {% for key, value in activity.items() %}
+            <div class="activity-item">
+                <span class="toggle" onclick="toggleVisibility('{{ key }}')">[+]</span><span>{{ key }}</span>
+                <pre id="{{ key }}" class="json-content">{{ value | tojson(indent=2) | safe }}</pre>
+            </div>
+        {% endfor %}
+    {% endfor %}
+
+    <a href="/dashboard">Back to Dashboard</a>
+
+    <script>
+        function toggleVisibility(id) {
+            const jsonContent = document.getElementById(id);
+            const toggleButton = jsonContent.previousSibling;
+
+            if (jsonContent.style.display === "none") {
+                jsonContent.style.display = "block";
+                toggleButton.textContent = "[-]";
+            } else {
+                jsonContent.style.display = "none";
+                toggleButton.textContent = "[+]";
+            }
+        }
+    </script>
+</body>
+</html>

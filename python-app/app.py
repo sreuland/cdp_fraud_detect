@@ -118,6 +118,48 @@ async def add_account(account_address: str = Form(...), current_user: dict = Dep
     return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
 
 
+@app.get("/activity", response_class=templates.TemplateResponse)
+async def activity(request: Request):
+    # Simulating some JSON data for the activity
+    activities = [
+        {
+            "hash1": {
+                "id": 1,
+                "name": "Activity 1",
+                "details": {
+                    "description": "Detail 1",
+                    "timestamp": "2024-10-14",
+                    "additional_info": {
+                        "valid": True,
+                        "related_activities": [
+                            {"id": 3, "name": "Sub Activity 1", "sin": ["aa", "bb" ]},
+                            {"id": 4, "name": "Sub Activity 2", "ss": {"aa": [1, 2,3]}},
+
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "hash2": {
+                "id": 2,
+                "name": "Activity 2",
+                "details": {
+                    "description": "Detail 2",
+                    "timestamp": "2024-10-15",
+                    "starttime": "10:00 AM",
+                    "endtime": "11:00 AM",
+                    "additional_info": {
+                        "valid": False,
+                        "location": "Conference Room A"
+                    }
+                }
+            }
+        }
+    ]
+
+    return templates.TemplateResponse("activity.html", {"request": request, "activities": activities})
+
 
 
 # Pydantic model for the message

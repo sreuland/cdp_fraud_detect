@@ -1,6 +1,6 @@
 import json
 import logging
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Response, Cookie
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2AuthorizationCodeBearer
 from httpx import AsyncClient
@@ -35,8 +35,19 @@ oauth2_scheme = OAuth2AuthorizationCodeBearer(
 )
 
 @router.get("/login")
-async def login():
-    return RedirectResponse(url=authorization_url)
+async def login(access_token: str = Cookie(None)):
+    """
+    Check if the user is already logged in by looking for the access_token cookie.
+    If found, redirect to the dashboard, otherwise redirect to Google login page.
+    """
+    if access_token:
+        # If access_token exists, assume the user is already logged in, redirect to dashboard
+        return RedirectResponse(url="/dashboard")
+    else:
+        # If no access_token, redirect to Google's OAuth 2.0 login
+        return RedirectResponse(url=authorization_url)
+
+
 
 @router.get("/callback")
 async def callback(request: Request, code: str):
@@ -65,3 +76,29 @@ async def callback(request: Request, code: str):
         response.set_cookie(key="access_token", value=tokens["access_token"], httponly=True)
 
         return response
+
+
+@router.get("/logout", response_class=RedirectResponse)
+async def logout(response: Response, access_token: str = Cookie(None)):
+    """
+    Log out the user by revoking the access_token from Google and deleting the access_token cookie.
+    """
+    if access_token:
+        async with AsyncClient() as client:
+            # Revoke the token by calling Google's revoke endpoint
+            revoke_response = await client.post(
+                "https://oauth2.googleapis.com/revoke",
+                params={"token": access_token},
+                headers={"content-type": "application/x-www-form-urlencoded"}
+            )
+
+            if revoke_response.status_code == 200:
+                logger.info("Access token successfully revoked.")
+            else:
+                logger.warning(f"Failed to revoke access token. Status code: {revoke_response.status_code}")
+
+    # Clear the access_token cookie
+    response = RedirectResponse(url="/")
+    response.delete_cookie(key="access_token")
+
+    return response
