@@ -1,5 +1,6 @@
 import json
 import logging
+
 from fastapi import APIRouter, Request, Response, Cookie
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2AuthorizationCodeBearer

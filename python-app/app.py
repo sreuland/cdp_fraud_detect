@@ -1,4 +1,5 @@
 import asyncio
+from collections import defaultdict
 from contextlib import asynccontextmanager
 
 from aiokafka import AIOKafkaProducer
@@ -7,7 +8,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2AuthorizationCodeBearer
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-
 from kafka_consumer import start_kafka_consumer
 from oauth import router as oauth_router
 from fastapi.responses import RedirectResponse
@@ -61,11 +61,6 @@ oauth2_scheme = OAuth2AuthorizationCodeBearer(
     tokenUrl=GOOGLE_TOKEN_URL
 )
 
-# User database simulation
-user_db = {}
-
-
-
 
 from fastapi import Cookie
 # Dependency to get the curren
@@ -98,23 +93,61 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+
+class User:
+    def __init__(self, name: str, email: str, accounts=None):
+        if accounts is None:
+            accounts = []
+        self.name: str = name
+        self.email: str = email
+        self.accounts: list[str]  = accounts
+
+
+# User database simulation
+user_db: dict[str, User] = {}
+
+user_list: list[User] = []
+
+accounts_to_users: dict[str, set[User]] = defaultdict(set)
+
+
 @app.get("/")
 async def read_root(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
 @app.get("/dashboard", response_class=templates.TemplateResponse)
 async def dashboard(request: Request, current_user: dict = Depends(get_current_user)):
-    return templates.TemplateResponse("dashboard.html", {"request": request, "user": current_user, "account_addresses": user_db.get(current_user["email"], [])})
+    user = user_db.get(current_user["email"], None)
+    return templates.TemplateResponse("dashboard.html", {
+        "request": request,
+        "user": current_user,
+        "account_addresses": user.accounts if user else []
+    })
+
 
 @app.get("/accounts", response_class=templates.TemplateResponse)
 async def accounts(request: Request, current_user: dict = Depends(get_current_user)):
-    return templates.TemplateResponse("accounts.html", {"request": request, "user": current_user, "account_addresses": user_db.get(current_user["email"], [])})
+    user = user_db.get(current_user["email"], None)
+    return templates.TemplateResponse("accounts.html", {
+        "request": request,
+        "user": current_user,
+        "account_addresses": user.accounts if user else []
+    })
+
 
 @app.post("/add_account", response_class=RedirectResponse)
 async def add_account(account_address: str = Form(...), current_user: dict = Depends(get_current_user)):
-    if current_user["email"] not in user_db:
-        user_db[current_user["email"]] = []
-    user_db[current_user["email"]].append({"address": account_address})
+    name, email = current_user.get("name", ""), current_user.get("email", "")
+
+    if email not in user_db:
+        user_db[email] = User(name, email)
+
+    user = user_db[email]
+    # Reverse mapping from account_address to list of interested users
+    user.accounts.append(account_address)
+    accounts_to_users[account_address].add(user)
+
     return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
 
 
