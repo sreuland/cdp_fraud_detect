@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
     <script>
         async function toggleRegisterForAll() {
@@ -16,63 +18,66 @@
                     body: JSON.stringify({ register_for_all: registerForAll })
                 });
 
-                const data = await response.json();
+                const data = await response.json(); // Parse the JSON response
                 if (data.status === "success") {
                     console.log("Register for all updated:", data.register_for_all);
-                    toggleAccountForm(); // Update the form visibility based on the new state
+
+                    // Clear the account addresses in the UI if "Register for all" is checked
+                    if (data.register_for_all) {
+                        const accountsList = document.getElementById("accounts_list");
+                        accountsList.innerHTML = ""; // Clear existing accounts in the UI
+                        document.getElementById("add_account_form").querySelector('input[type="text"]').disabled = true; // Disable the add account field
+                    } else {
+                        document.getElementById("add_account_form").querySelector('input[type="text"]').disabled = false; // Enable the add account field
+                    }
                 } else {
-                    console.error("Failed to update register for all.");
+                    console.error("Failed to update register for all:", data.message);
                 }
             } catch (error) {
                 console.error("Error updating register for all:", error);
             }
         }
-
-        function toggleAccountForm() {
-            const registerForAllCheckbox = document.getElementById("register_for_all");
-            const accountForm = document.getElementById("add_account_form");
-            const addAccountButton = document.getElementById("add_account_button");
-
-            if (registerForAllCheckbox.checked) {
-                accountForm.style.display = "none"; // Hide form when checked
-            } else {
-                accountForm.style.display = "block"; // Show form when unchecked
-            }
-        }
-
-        window.onload = function() {
-            toggleAccountForm(); // Call on load to set initial state
-        };
     </script>
 </head>
 <body>
-    <h1>Welcome {{ user.name }}!</h1>
-    <p>Email: {{ user.email }}</p>
+    <h1>Dashboard</h1>
+    <p>Welcome, {{ user['name'] }}!</p>
+    <p>Your registered email: {{ user['email'] }}</p>
 
-    <h2>Your Registered Account Addresses:</h2>
-    <ul>
-        {% for address in account_addresses %}
-            <li>{{ address }}</li>
+    <div>
+        <label>
+            <input type="checkbox" id="register_for_all" onchange="toggleRegisterForAll()"
+                {% if register_for_all %}checked{% endif %}>
+            Register for all
+        </label>
+    </div>
+
+    <h3>Registered Accounts</h3>
+    <ul id="accounts_list">
+        {% for account in account_addresses %}
+            <li>
+                {{ account }}
+                <form method="post" action="/delete_account" style="display:inline;">
+                    <input type="hidden" name="account_address" value="{{ account }}">
+                    <button type="submit">Delete</button>
+                </form>
+            </li>
         {% endfor %}
     </ul>
 
-    <h2>Add a new account address:</h2>
-    <form id="add_account_form" action="/add_account" method="post">
-        <input type="text" name="account_address" placeholder="Enter account address" required>
-        <button type="submit" id="add_account_button">Add Account</button>
+    <h3>Add Account</h3>
+    <form id="add_account_form" method="post" action="/add_account">
+        <input type="text" name="account_address" required placeholder="Add Account Address">
+        <button type="submit">Add Account</button>
     </form>
 
-    <label>
-        <input type="checkbox" id="register_for_all" name="register_for_all"
-               onchange="toggleRegisterForAll()" {% if register_for_all %} checked {% endif %}>
-        Register for All
-    </label>
 
-    <br>
-    <a href="/accounts">View Accounts</a>
-    <br>
-    <a href="/activity">View Activity</a> <!-- Link to the Activity page -->
-    <br>
-    <a href="/logout">Logout</a> <!-- Logout button -->
+    <h3>Activity</h3>
+    <p><a href="/activity">View Activity</a></p>  <!-- Link to View Activity -->
+
+    <h3>Logout</h3>
+    <form method="post" action="/logout">
+        <button type="submit">Logout</button>
+    </form>
 </body>
 </html>

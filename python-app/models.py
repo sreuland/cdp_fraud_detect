@@ -9,9 +9,13 @@ class User:
         self.accounts: list[str]  = accounts
         self.register_for_all = register_for_all
 
+    def __str__(self) -> str:
+        # Custom string representation for logging
+        return f"User(name={self.name}, email={self.email}, accounts={self.accounts}, register_for_all={self.register_for_all})"
 
-
-
+    def __repr__(self) -> str:
+        # Optional: Custom representation for developers
+        return self.__str__()
 
 class FraudEvent(BaseModel):
     account_id: str = Field(..., alias="AccountId")

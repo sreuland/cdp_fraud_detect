@@ -32,7 +32,7 @@ async def callback(code: str):
     return response
 
 
-@router.get("/logout")
+@router.post("/logout")
 async def logout(response: RedirectResponse, access_token: str = Cookie(None)):
     if access_token:
         # (Optional) Add revoke_google_token function to invalidate token

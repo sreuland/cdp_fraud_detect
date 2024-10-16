@@ -84,18 +84,9 @@ async def dashboard(request: Request, current_user: dict = Depends(get_current_u
         user_db[email] = User(name, email)
 
     user: Optional[User] = user_db.get(email)
+
+    logger.info(f"--------  User = {user}")
     return templates.TemplateResponse("dashboard.html", {
-        "request": request,
-        "user": current_user,
-        "account_addresses": user.accounts if user else [],
-        "register_for_all": user.register_for_all if user else False  # Pass the flag
-    })
-
-
-@app.get("/accounts", response_class=templates.TemplateResponse)
-async def accounts(request: Request, current_user: dict = Depends(get_current_user)):
-    user = user_db.get(current_user["email"], None)
-    return templates.TemplateResponse("accounts.html", {
         "request": request,
         "user": current_user,
         "account_addresses": user.accounts if user else [],
@@ -110,6 +101,7 @@ async def add_account(account_address: str = Form(...), current_user: dict = Dep
         user_db[email] = User(name, email)
 
     user = user_db[email]
+    logger.info(f"--------  User = {user}")
     # Reverse mapping from account_address to list of interested users
     user.accounts.append(account_address)
     accounts_to_users[account_address].add(user)
@@ -117,34 +109,39 @@ async def add_account(account_address: str = Form(...), current_user: dict = Dep
     return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
 
 
-
 @app.post("/delete_account", response_class=RedirectResponse)
 async def delete_account(account_address: str = Form(...), current_user: dict = Depends(get_current_user)):
-    user = user_db.get(current_user["email"], None)
-    user.accounts.remove(account_address)  # Remove the account from the user's list
+    name, email = current_user.get("name", ""), current_user.get("email", "")
+    if email not in user_db:
+        user_db[email] = User(name, email)
+
+    user = user_db.get(current_user["email"])
+    if account_address in user.accounts:
+        user.accounts.remove(account_address)  # Remove the account from the user's list
     accounts_to_users[account_address].discard(user)  # Remove user from the account's interested users
     if not accounts_to_users[account_address]:  # If no users are interested anymore, remove the account
         del accounts_to_users[account_address]
-    return RedirectResponse(url="/accounts", status_code=303)
+    return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
 
 @app.post("/set_register_for_all")
 async def set_register_for_all(request: Request, current_user: dict = Depends(get_current_user)):
-    data = await request.json()  # Read JSON data
-    register_for_all: bool = data.get("register_for_all", False)  # Extract value
-    logger.info(f"------------ data is {data}")
+    if request.method == "POST":
+        # Check if the request is an AJAX request
+        data = await request.json()  # Read JSON data
+        register_for_all: bool = data.get("register_for_all", False)  # Extract value
+        logger.info(f"------------ data is {data}")
 
-    logger.info(f"-------- register_for_all === {register_for_all}")
-    user: Optional[User] = user_db.get(current_user["email"], None)
+        logger.info(f"-------- register_for_all === {register_for_all}")
+        user: Optional[User] = user_db.get(current_user["email"])
+        user.register_for_all = register_for_all
+        if user.register_for_all:
+            user.accounts = []  # Clear accounts if "Register for all" is enabled
 
-    if user is None:
-        logger.error(f"User not found for email: {current_user['email']}")
-        return JSONResponse(content={"status": "error", "message": "User not found"}, status_code=404)
+        # Return JSON response
+        return JSONResponse(content={"status": "success", "register_for_all": user.register_for_all})
 
-    user.register_for_all = register_for_all
-    if user.register_for_all:
-        user.accounts = []  # Clear accounts if "Register for all" is enabled
+    return JSONResponse(content={"status": "error", "message": "Invalid request."}, status_code=400)
 
-    return JSONResponse(content={"status": "success", "register_for_all": user.register_for_all})
 
 
 
