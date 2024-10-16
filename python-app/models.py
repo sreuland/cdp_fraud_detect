@@ -1,12 +1,13 @@
 from pydantic import BaseModel, Field
 
 class User:
-    def __init__(self, name: str, email: str, accounts=None):
+    def __init__(self, name: str, email: str, accounts=None, register_for_all = False):
         if accounts is None:
             accounts = []
         self.name: str = name
         self.email: str = email
         self.accounts: list[str]  = accounts
+        self.register_for_all = register_for_all
 
 
 

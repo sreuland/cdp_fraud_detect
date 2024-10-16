@@ -2,6 +2,48 @@
 <html>
 <head>
     <title>Dashboard</title>
+    <script>
+        async function toggleRegisterForAll() {
+            const registerForAllCheckbox = document.getElementById("register_for_all");
+            const registerForAll = registerForAllCheckbox.checked;
+
+            try {
+                const response = await fetch("/set_register_for_all", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ register_for_all: registerForAll })
+                });
+
+                const data = await response.json();
+                if (data.status === "success") {
+                    console.log("Register for all updated:", data.register_for_all);
+                    toggleAccountForm(); // Update the form visibility based on the new state
+                } else {
+                    console.error("Failed to update register for all.");
+                }
+            } catch (error) {
+                console.error("Error updating register for all:", error);
+            }
+        }
+
+        function toggleAccountForm() {
+            const registerForAllCheckbox = document.getElementById("register_for_all");
+            const accountForm = document.getElementById("add_account_form");
+            const addAccountButton = document.getElementById("add_account_button");
+
+            if (registerForAllCheckbox.checked) {
+                accountForm.style.display = "none"; // Hide form when checked
+            } else {
+                accountForm.style.display = "block"; // Show form when unchecked
+            }
+        }
+
+        window.onload = function() {
+            toggleAccountForm(); // Call on load to set initial state
+        };
+    </script>
 </head>
 <body>
     <h1>Welcome {{ user.name }}!</h1>
@@ -15,11 +57,18 @@
     </ul>
 
     <h2>Add a new account address:</h2>
-    <form action="/add_account" method="post">
+    <form id="add_account_form" action="/add_account" method="post">
         <input type="text" name="account_address" placeholder="Enter account address" required>
-        <button type="submit">Add Account</button>
+        <button type="submit" id="add_account_button">Add Account</button>
     </form>
 
+    <label>
+        <input type="checkbox" id="register_for_all" name="register_for_all"
+               onchange="toggleRegisterForAll()" {% if register_for_all %} checked {% endif %}>
+        Register for All
+    </label>
+
+    <br>
     <a href="/accounts">View Accounts</a>
     <br>
     <a href="/activity">View Activity</a> <!-- Link to the Activity page -->

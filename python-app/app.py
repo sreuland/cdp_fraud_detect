@@ -2,6 +2,7 @@ import asyncio
 import json
 from collections import defaultdict
 from contextlib import asynccontextmanager
+from typing import Optional
 
 from aiokafka import AIOKafkaProducer
 from fastapi import FastAPI, Depends, Form, Request, status
@@ -12,7 +13,7 @@ from kafka_config import KAFKA_BOOTSTRAP_SERVERS, KAFKA_FRAUD_TOPIC
 from kafka_consumer import start_kafka_consumer
 from models import User, FraudEvent
 from oauth import router as oauth_router
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
 import logging
 
 from oauth_utils import get_current_user
@@ -77,11 +78,17 @@ async def read_root(request: Request):
 
 @app.get("/dashboard", response_class=templates.TemplateResponse)
 async def dashboard(request: Request, current_user: dict = Depends(get_current_user)):
-    user = user_db.get(current_user["email"], None)
+    name, email = current_user.get("name", ""), current_user.get("email", "")
+
+    if email not in user_db:
+        user_db[email] = User(name, email)
+
+    user: Optional[User] = user_db.get(email)
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "user": current_user,
-        "account_addresses": user.accounts if user else []
+        "account_addresses": user.accounts if user else [],
+        "register_for_all": user.register_for_all if user else False  # Pass the flag
     })
 
 
@@ -91,14 +98,14 @@ async def accounts(request: Request, current_user: dict = Depends(get_current_us
     return templates.TemplateResponse("accounts.html", {
         "request": request,
         "user": current_user,
-        "account_addresses": user.accounts if user else []
+        "account_addresses": user.accounts if user else [],
+        "register_for_all": user.register_for_all if user else False  # Pass the flag
     })
 
 
 @app.post("/add_account", response_class=RedirectResponse)
 async def add_account(account_address: str = Form(...), current_user: dict = Depends(get_current_user)):
     name, email = current_user.get("name", ""), current_user.get("email", "")
-
     if email not in user_db:
         user_db[email] = User(name, email)
 
@@ -108,6 +115,37 @@ async def add_account(account_address: str = Form(...), current_user: dict = Dep
     accounts_to_users[account_address].add(user)
 
     return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
+
+
+
+@app.post("/delete_account", response_class=RedirectResponse)
+async def delete_account(account_address: str = Form(...), current_user: dict = Depends(get_current_user)):
+    user = user_db.get(current_user["email"], None)
+    user.accounts.remove(account_address)  # Remove the account from the user's list
+    accounts_to_users[account_address].discard(user)  # Remove user from the account's interested users
+    if not accounts_to_users[account_address]:  # If no users are interested anymore, remove the account
+        del accounts_to_users[account_address]
+    return RedirectResponse(url="/accounts", status_code=303)
+
+@app.post("/set_register_for_all")
+async def set_register_for_all(request: Request, current_user: dict = Depends(get_current_user)):
+    data = await request.json()  # Read JSON data
+    register_for_all: bool = data.get("register_for_all", False)  # Extract value
+    logger.info(f"------------ data is {data}")
+
+    logger.info(f"-------- register_for_all === {register_for_all}")
+    user: Optional[User] = user_db.get(current_user["email"], None)
+
+    if user is None:
+        logger.error(f"User not found for email: {current_user['email']}")
+        return JSONResponse(content={"status": "error", "message": "User not found"}, status_code=404)
+
+    user.register_for_all = register_for_all
+    if user.register_for_all:
+        user.accounts = []  # Clear accounts if "Register for all" is enabled
+
+    return JSONResponse(content={"status": "success", "register_for_all": user.register_for_all})
+
 
 
 @app.get("/activity", response_class=templates.TemplateResponse)
