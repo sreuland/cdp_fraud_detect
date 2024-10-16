@@ -1,26 +1,32 @@
 import asyncio
+import json
 from collections import defaultdict
 from contextlib import asynccontextmanager
 
 from aiokafka import AIOKafkaProducer
-from fastapi import FastAPI, Depends, Form, Request, status, HTTPException
+from fastapi import FastAPI, Depends, Form, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import OAuth2AuthorizationCodeBearer
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
+
+from kafka_config import KAFKA_BOOTSTRAP_SERVERS, KAFKA_FRAUD_TOPIC
 from kafka_consumer import start_kafka_consumer
+from models import User, FraudEvent
 from oauth import router as oauth_router
 from fastapi.responses import RedirectResponse
-from httpx import AsyncClient
-import json
 import logging
+
+from oauth_utils import get_current_user
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting Kafka consumer during application startup...")
     producer = AIOKafkaProducer(
-        bootstrap_servers='localhost:9092'  # Adjust if your Kafka server is different
+        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS  # Adjust if your Kafka server is different
     )
     await producer.start()
     app.state.producer = producer
@@ -28,7 +34,6 @@ async def lifespan(app: FastAPI):
     logger.info("Starting Kafka producer during application startup...")
     consumer_task = asyncio.create_task(start_kafka_consumer(user_db))
 
-    # Consumer stuff
     try:
         yield
     finally:
@@ -41,42 +46,9 @@ async def lifespan(app: FastAPI):
         await consumer_task  # Await the cancellation
         logger.info("Kafka consumer has been shut down.")
 
+# App startup
 templates = Jinja2Templates(directory="templates")
 
-
-# Load Google OAuth configuration
-with open("client_secret.json") as f:
-    oauth_config = json.load(f)
-
-GOOGLE_CLIENT_ID = oauth_config["web"]["client_id"]
-GOOGLE_CLIENT_SECRET = oauth_config["web"]["client_secret"]
-GOOGLE_REDIRECT_URI = oauth_config["web"]["redirect_uris"][0]
-GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
-#GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
-GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
-
-# Create OAuth2AuthorizationCodeBearer object
-oauth2_scheme = OAuth2AuthorizationCodeBearer(
-    authorizationUrl=f"https://accounts.google.com/o/oauth2/auth?client_id={GOOGLE_CLIENT_ID}&redirect_uri={GOOGLE_REDIRECT_URI}&response_type=code&scope=openid email profile",
-    tokenUrl=GOOGLE_TOKEN_URL
-)
-
-
-from fastapi import Cookie
-# Dependency to get the curren
-async def get_current_user(access_token: str = Cookie(None)):
-    if access_token is None:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-    async with AsyncClient() as client:
-        logger.warning(f"*********** Getting info from {GOOGLE_USERINFO_URL}")
-        response = await client.get(GOOGLE_USERINFO_URL, headers={"Authorization": f"Bearer {access_token}"})
-        response.raise_for_status()
-        return response.json()
-
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 app = FastAPI(
    lifespan=lifespan
@@ -94,21 +66,8 @@ app.add_middleware(
 )
 
 
-
-class User:
-    def __init__(self, name: str, email: str, accounts=None):
-        if accounts is None:
-            accounts = []
-        self.name: str = name
-        self.email: str = email
-        self.accounts: list[str]  = accounts
-
-
 # User database simulation
 user_db: dict[str, User] = {}
-
-user_list: list[User] = []
-
 accounts_to_users: dict[str, set[User]] = defaultdict(set)
 
 
@@ -195,19 +154,16 @@ async def activity(request: Request):
 
 
 
-# Pydantic model for the message
-class Message(BaseModel):
-    account_address: str
-    details: str
 
 
 async def get_producer() -> AIOKafkaProducer:
     return app.state.producer
 
 @app.post("/push_message")
-async def push_message(message: Message, producer: AIOKafkaProducer = Depends(get_producer)):
+async def push_message(message: dict, producer: AIOKafkaProducer = Depends(get_producer)):
     try:
-        await producer.send_and_wait('ledger.updates', value=message.model_dump_json().encode('utf-8'))
+        ss = json.dumps(message)
+        await producer.send_and_wait(KAFKA_FRAUD_TOPIC, value=ss.encode("utf-8"))
         logger.info(f"Message sent to Kafka topic 'ledger.updates': {message}")
         return {"status": "success", "message": "Message sent to Kafka."}
     except Exception as e:

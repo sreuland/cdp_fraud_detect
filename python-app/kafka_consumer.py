@@ -1,12 +1,16 @@
 import asyncio
 import json
 import logging
+
 from aiokafka import AIOKafkaConsumer
-from email_utils import send_email
+from pydantic import  ValidationError
+from models import FraudEvent
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+from kafka_config import KAFKA_FRAUD_TOPIC, KAFKA_BOOTSTRAP_SERVERS
 
 # Kafka consumer class using aiokafka
 class AccountActivityConsumer:
@@ -22,18 +26,32 @@ class AccountActivityConsumer:
         )
 
     async def process_message(self, message):
-        data = json.loads(message.value.decode('utf-8'))
-        account_address = data.get('account_address', None)
-        activity_details = data.get('details', None)
+        try:
+            json_data = json.loads(message.value.decode('utf-8'))
+            logger.info(f"******* received raw dict on kafak - {json_data}")
 
-        logger.info(f"Received activity for account: {account_address}")
+            # Normalize keys to snake_case if needed
+            normalized_data = {
+                "account_id": json_data.get("account_id") or json_data.get("AccountId"),
+                "tx_hash": json_data.get("tx_hash") or json_data.get("TxHash"),
+                "timestamp": json_data.get("timestamp") or json_data.get("Timestamp"),
+                "event_type": json_data.get("event_type") or json_data.get("Type")
+            }
+            message = FraudEvent.model_validate(normalized_data)
 
-        # Check if the account address is registered
-        for user_email, user in self.user_db.items():
-            if account_address in [addr['address'] for addr in user]:
-                # Send email notification
-                send_email(user_email, account_address, activity_details)
-                logger.info(f"Email sent to {user_email} for account {account_address}")
+            logger.info(f"Received activity for account: {message.account_id}")
+
+            # Check if the account address is registered
+            for user_email, user in self.user_db.items():
+                if message.account_id in [addr['address'] for addr in user]:
+                   pass
+        except json.JSONDecodeError as je:
+            logger.error(f"Error decoding message: {je}")
+        except ValidationError as ve:
+            logger.error(f"Failed to validate json data to pydantic model: {ve}")
+
+        except Exception as e:
+            logger.error(f"Error processing message: {e}")
 
 
     async def consume(self):
@@ -52,8 +70,6 @@ class AccountActivityConsumer:
 
 # Function to start the Kafka consumer
 async def start_kafka_consumer(user_db):
-    kafka_topic = 'ledger.updates'
-    kafka_bootstrap_servers = 'localhost:9092'  # Adjust if your Kafka server is different
-    logger.info(f"Connecting to Kafka at {kafka_bootstrap_servers} on topic '{kafka_topic}'...")
-    consumer = AccountActivityConsumer(user_db, kafka_topic, kafka_bootstrap_servers)
+    logger.info(f"Connecting to Kafka at {KAFKA_BOOTSTRAP_SERVERS} on topic '{KAFKA_FRAUD_TOPIC}'...")
+    consumer = AccountActivityConsumer(user_db, KAFKA_FRAUD_TOPIC, KAFKA_BOOTSTRAP_SERVERS)
     await consumer.consume()
