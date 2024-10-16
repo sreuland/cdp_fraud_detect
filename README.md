@@ -32,6 +32,7 @@ docker exec -it kafka-service  kafka-topics --list --bootstrap-server localhost:
 
 
 ### Run Golang CDP processor
+refer to [cdp_processor/README.md](cdp_processor/README.md)
 
 
 ### Run API Exporter

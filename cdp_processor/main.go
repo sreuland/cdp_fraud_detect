@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"os"
 	"os/signal"
@@ -19,55 +20,91 @@ import (
 	"github.com/stellar/go/support/datastore"
 	"github.com/stellar/go/support/storage"
 	"github.com/stellar/go/xdr"
+
+	"github.com/bmatsuo/lmdb-go/lmdb"
+	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
 
 // Services
 type FraudDetector struct {
-	dbUrl string
+	lmdbDBI lmdb.DBI
+	lmdbEnv *lmdb.Env
 }
 type FraudDetection struct {
-	AccountId string
-	FraudType string
+	FraudTypes []string
 }
 type FraudDetectionService interface {
-	GetFraudulentAccounts() (map[string]FraudDetection, error)
+	GetFraudulentAccount(accountId string) (*FraudDetection, error)
+	Close()
 }
 
-func (service FraudDetector) GetFraudulentAccounts() (map[string]FraudDetection, error) {
-	//TODO
-	return make(map[string]FraudDetection), nil
+type fraudulentLmdbValueModel struct {
+	tags []string
 }
 
-func NewFraudDetectionService() FraudDetectionService {
-	//TODO
-	return &FraudDetector{}
+func (service *FraudDetector) Close() {
+	service.lmdbEnv.Close()
 }
 
-type RegistrationActor struct {
-	dbUrl string
+func (service *FraudDetector) GetFraudulentAccount(accountId string) (*FraudDetection, error) {
+	var result *FraudDetection
+
+	err := service.lmdbEnv.View(func(txn *lmdb.Txn) (err error) {
+		var valueModel fraudulentLmdbValueModel
+		value, err := txn.Get(service.lmdbDBI, []byte(accountId))
+		if lmdb.IsNotFound(err) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if err := json.Unmarshal(value, &valueModel); err != nil {
+			return errors.Wrap(err, "unmarshaling json")
+		}
+		result = &FraudDetection{FraudTypes: valueModel.tags}
+		return nil
+	})
+
+	return result, err
 }
 
-type RegistrationService interface {
-	GetRegistrationsForAccount(accountId string) ([]string, error)
-}
+func NewFraudDetectionService(lmdbPath string) (FraudDetectionService, error) {
+	// create an environment and make sure it is eventually closed.
+	env, err := lmdb.NewEnv()
+	if err != nil {
+		return nil, err
+	}
 
-func (service RegistrationActor) GetRegistrationsForAccount(accountId string) ([]string, error) {
-	//TODO
-	return []string{}, nil
-}
+	err = env.SetMapSize(1 << 30)
+	if err != nil {
+		env.Close()
+		return nil, err
+	}
+	err = env.Open(lmdbPath, lmdb.NoLock|lmdb.Readonly, fs.FileMode(uint(0777)))
+	if err != nil {
+		env.Close()
+		return nil, err
+	}
 
-func NewRegistrationService() RegistrationService {
-	//TODO
-	return &RegistrationActor{}
+	var dbi lmdb.DBI
+	err = env.View(func(txn *lmdb.Txn) (err error) {
+		dbi, err = txn.OpenRoot(0)
+		return err
+	})
+	if err != nil {
+		env.Close()
+		return nil, err
+	}
+
+	return &FraudDetector{lmdbDBI: dbi, lmdbEnv: env}, nil
 }
 
 // Application models
 type FraudEvent struct {
-	AppUserId string
 	AccountId string
 	TxHash    string
 	Timestamp uint
-	Type      string
+	Types     []string
 }
 
 // application data pipeline
@@ -85,18 +122,47 @@ type Publisher interface {
 
 // Ingestion Pipeline Processors
 type KafkaOutboundAdapter struct {
-	Publisher interface{}
+	producer   *kafka.Producer
+	fraudTopic string
+}
+
+func NewKafkaOutboundAdpater(kafkaBootstrapServer, kafkaTopic string) (*KafkaOutboundAdapter, error) {
+	kafkaPub, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": kafkaBootstrapServer})
+	if err != nil {
+		return nil, err
+	}
+
+	// Delivery report handler for produced messages
+	go func() {
+		for e := range kafkaPub.Events() {
+			switch ev := e.(type) {
+			case *kafka.Message:
+				if ev.TopicPartition.Error != nil {
+					fmt.Printf("Delivery failed: %v\n", ev.TopicPartition)
+				} else {
+					fmt.Printf("Delivered message to %v\n", ev.TopicPartition)
+				}
+			}
+		}
+	}()
+
+	return &KafkaOutboundAdapter{producer: kafkaPub, fraudTopic: kafkaTopic}, nil
 }
 
 func (adapter *KafkaOutboundAdapter) Process(ctx context.Context, msg Message) error {
-	// TODO - publish FraudEvent json to kafka here
-	return nil
+	return adapter.producer.Produce(&kafka.Message{
+		TopicPartition: kafka.TopicPartition{Topic: &adapter.fraudTopic, Partition: kafka.PartitionAny},
+		Value:          msg.Payload.([]byte),
+	}, nil)
+}
+
+func (adapter *KafkaOutboundAdapter) Close() {
+	adapter.producer.Close()
 }
 
 type FraudDetectionTransformer struct {
 	processors            []Processor
 	fraudDetectionService FraudDetectionService
-	registrationService   RegistrationService
 	networkPassPhrase     string
 }
 
@@ -106,6 +172,8 @@ func (transformer *FraudDetectionTransformer) Subscribe(receiver Processor) {
 
 func (transformer *FraudDetectionTransformer) Process(ctx context.Context, msg Message) error {
 	ledgerCloseMeta := msg.Payload.(xdr.LedgerCloseMeta)
+	fmt.Printf("inspecting ledger %v for fraud detection ...\n", ledgerCloseMeta.LedgerSequence())
+
 	ledgerTxReader, err := ingest.NewLedgerTransactionReaderFromLedgerCloseMeta(transformer.networkPassPhrase, ledgerCloseMeta)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create reader for ledger %v", ledgerCloseMeta.LedgerSequence())
@@ -113,35 +181,39 @@ func (transformer *FraudDetectionTransformer) Process(ctx context.Context, msg M
 
 	closeTime := uint(ledgerCloseMeta.LedgerHeaderHistoryEntry().Header.ScpValue.CloseTime)
 
-	// scan all transactions in a ledger for fraud accounts
-	fraudulentAccounts, err := transformer.fraudDetectionService.GetFraudulentAccounts()
-	if err != nil {
-		return errors.Wrapf(err, "failed to get fraud list for ledger %v", ledgerCloseMeta.LedgerSequence())
-	}
 	transaction, err := ledgerTxReader.Read()
 	for ; err == nil; transaction, err = ledgerTxReader.Read() {
-		accountId := transaction.Envelope.SourceAccount().ToAccountId().Address()
-		if fraudDetected, ok := fraudulentAccounts[accountId]; ok {
-			registeredAppWatchers, err := transformer.registrationService.GetRegistrationsForAccount(accountId)
+		accountParticipants, err := getParticipants(transaction, ledgerCloseMeta.LedgerSequence())
+		if err != nil {
+			return err
+		}
+
+		for _, accountId := range accountParticipants {
+			fraudDetection, err := transformer.fraudDetectionService.GetFraudulentAccount(accountId)
 			if err != nil {
 				return err
 			}
-			for _, registeredAppUserId := range registeredAppWatchers {
-				fraudEvent := FraudEvent{
-					AppUserId: registeredAppUserId,
-					AccountId: accountId,
-					TxHash:    transaction.Result.TransactionHash.HexString(),
-					Timestamp: closeTime,
-					Type:      fraudDetected.FraudType,
-				}
-				jsonBytes, err := json.Marshal(fraudEvent)
-				if err != nil {
-					return err
-				}
+			if fraudDetection == nil {
+				// account not fraudulent!
+				continue
+			}
 
-				for _, processor := range transformer.processors {
-					processor.Process(ctx, Message{Payload: jsonBytes})
-				}
+			fmt.Printf("Detected fraudulent account activity on tx hash: %v, for account: %v\n",
+				transaction.Result.TransactionHash.HexString(), accountId)
+
+			fraudEvent := FraudEvent{
+				AccountId: accountId,
+				TxHash:    transaction.Result.TransactionHash.HexString(),
+				Timestamp: closeTime,
+				Types:     fraudDetection.FraudTypes,
+			}
+			jsonBytes, err := json.Marshal(fraudEvent)
+			if err != nil {
+				return err
+			}
+
+			for _, processor := range transformer.processors {
+				processor.Process(ctx, Message{Payload: jsonBytes})
 			}
 		}
 	}
@@ -163,14 +235,9 @@ func (adapter *LedgerMetadataInboundAdapter) Subscribe(receiver Processor) {
 }
 
 func (adapter *LedgerMetadataInboundAdapter) Run(ctx context.Context) error {
-
-	/////////////////////////////////////////////////////////////////
-	// TODO - make this easier for callers, move latest ledger fetch into cdp.ApplyLedgerMetadata()
-	// so caller doesn't have to this to start streaming from latest use case
-	// i.e. allow unbounded range with from=0 which can signal the same.
 	historyArchive, err := historyarchive.NewArchivePool(adapter.historyArchiveURLs, historyarchive.ArchiveOptions{
 		ConnectOptions: storage.ConnectOptions{
-			UserAgent: "payment_demo",
+			UserAgent: "fraud_demo",
 			Context:   ctx,
 		},
 	})
@@ -179,7 +246,6 @@ func (adapter *LedgerMetadataInboundAdapter) Run(ctx context.Context) error {
 	}
 	// Acquire the most recent ledger on network to begin streaming from
 	latestNetworkLedger, err := historyArchive.GetLatestLedgerSequence()
-	/////////////////////////////////////////////////////////////////////
 
 	if err != nil {
 		return errors.Wrap(err, "error getting latest ledger")
@@ -205,6 +271,9 @@ func (adapter *LedgerMetadataInboundAdapter) Run(ctx context.Context) error {
 }
 
 func main() {
+	lmdbPath := os.Getenv("LMDB_PATH")
+	kafkaBootstrapServer := os.Getenv("KAFKA_BOOTSTRAP_SERVER")
+	kafkaTopic := os.Getenv("KAFKA_TOPIC")
 	// run a data pipeline that transforms Pubnet ledger metadata into fraud events
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer stop()
@@ -224,20 +293,31 @@ func main() {
 
 	// create the inbound source of pubnet ledger metadata
 	ledgerMetadataInboundAdapter := &LedgerMetadataInboundAdapter{
-		historyArchiveURLs: network.PublicNetworkhistoryArchiveURLs,
+		historyArchiveURLs: network.TestNetworkhistoryArchiveURLs,
 		dataStoreConfig:    datastoreConfig,
 	}
 
+	fraudDetectionService, err := NewFraudDetectionService(lmdbPath)
+	if err != nil {
+		fmt.Printf("error creating fraud detection service: %v\n", err)
+		return
+	}
+	defer fraudDetectionService.Close()
+
 	// create the transformer to convert network data to fraud detections
 	fraudDetectionTransformer := &FraudDetectionTransformer{
-		networkPassPhrase:     network.PublicNetworkPassphrase,
-		fraudDetectionService: NewFraudDetectionService(),
-		registrationService:   NewRegistrationService(),
+		networkPassPhrase:     network.TestNetworkPassphrase,
+		fraudDetectionService: fraudDetectionService,
 	}
 
 	// create the outbound adapter, this is the end point of the pipeline
 	// publishes application data model as messages to a broker
-	outboundAdapter := &KafkaOutboundAdapter{}
+	outboundAdapter, err := NewKafkaOutboundAdpater(kafkaBootstrapServer, kafkaTopic)
+	if err != nil {
+		fmt.Printf("error creating kafka producer: %v\n", err)
+		return
+	}
+	defer outboundAdapter.Close()
 
 	// wire up the ingestion pipeline and let it run
 	fraudDetectionTransformer.Subscribe(outboundAdapter)
