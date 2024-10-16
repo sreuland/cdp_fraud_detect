@@ -4,7 +4,8 @@ import logging
 
 from aiokafka import AIOKafkaConsumer
 from pydantic import  ValidationError
-from models import FraudEvent
+
+from models import FraudEvent, User
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -12,10 +13,13 @@ logger = logging.getLogger(__name__)
 
 from kafka_config import KAFKA_FRAUD_TOPIC, KAFKA_BOOTSTRAP_SERVERS
 
+
 # Kafka consumer class using aiokafka
 class AccountActivityConsumer:
-    def __init__(self, user_db, kafka_topic, kafka_bootstrap_servers):
+    def __init__(self, kafka_topic: str, kafka_bootstrap_servers: str, user_db: dict[str, User], accounts_to_users: dict[str, set[User]], starred_users: set[User]):
         self.user_db = user_db
+        self.accounts_to_users = accounts_to_users
+        self.starred_users = starred_users
         self.kafka_topic = kafka_topic
         self.consumer = AIOKafkaConsumer(
             self.kafka_topic,
@@ -41,10 +45,13 @@ class AccountActivityConsumer:
 
             logger.info(f"Received activity for account: {message.account_id}")
 
-            # Check if the account address is registered
-            for user_email, user in self.user_db.items():
-                if message.account_id in [addr['address'] for addr in user]:
-                   pass
+            account_id = message.account_id
+            for user in self.accounts_to_users[account_id]:
+                user.timeline.add_event(message)
+
+            for user in self.starred_users:
+                user.timeline.add_event(message)
+
         except json.JSONDecodeError as je:
             logger.error(f"Error decoding message: {je}")
         except ValidationError as ve:
@@ -69,7 +76,9 @@ class AccountActivityConsumer:
 
 
 # Function to start the Kafka consumer
-async def start_kafka_consumer(user_db):
+async def start_kafka_consumer(user_db, accounts_to_users, starred_users):
     logger.info(f"Connecting to Kafka at {KAFKA_BOOTSTRAP_SERVERS} on topic '{KAFKA_FRAUD_TOPIC}'...")
-    consumer = AccountActivityConsumer(user_db, KAFKA_FRAUD_TOPIC, KAFKA_BOOTSTRAP_SERVERS)
+    consumer = AccountActivityConsumer(KAFKA_FRAUD_TOPIC, KAFKA_BOOTSTRAP_SERVERS, user_db, accounts_to_users, starred_users)
     await consumer.consume()
+
+

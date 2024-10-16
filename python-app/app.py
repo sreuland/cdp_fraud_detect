@@ -2,7 +2,8 @@ import asyncio
 import json
 from collections import defaultdict
 from contextlib import asynccontextmanager
-from typing import Optional
+from random import randint, choice
+from typing import Optional, OrderedDict
 
 from aiokafka import AIOKafkaProducer
 from fastapi import FastAPI, Depends, Form, Request, status
@@ -33,7 +34,7 @@ async def lifespan(app: FastAPI):
     app.state.producer = producer
 
     logger.info("Starting Kafka producer during application startup...")
-    consumer_task = asyncio.create_task(start_kafka_consumer(user_db))
+    consumer_task = asyncio.create_task(start_kafka_consumer(user_db, accounts_to_users, starred_users))
 
     try:
         yield
@@ -71,6 +72,7 @@ app.add_middleware(
 user_db: dict[str, User] = {}
 accounts_to_users: dict[str, set[User]] = defaultdict(set)
 
+starred_users: set[User] = set()
 
 @app.get("/")
 async def read_root(request: Request):
@@ -136,6 +138,9 @@ async def set_register_for_all(request: Request, current_user: dict = Depends(ge
         user.register_for_all = register_for_all
         if user.register_for_all:
             user.accounts = []  # Clear accounts if "Register for all" is enabled
+            starred_users.add(user)
+        else:
+            starred_users.discard(user)
 
         # Return JSON response
         return JSONResponse(content={"status": "success", "register_for_all": user.register_for_all})
@@ -148,45 +153,19 @@ async def set_register_for_all(request: Request, current_user: dict = Depends(ge
 @app.get("/activity", response_class=templates.TemplateResponse)
 async def activity(request: Request):
     # Simulating some JSON data for the activity
-    activities = [
-        {
-            "hash1": {
-                "id": 1,
-                "name": "Activity 1",
-                "details": {
-                    "description": "Detail 1",
-                    "timestamp": "2024-10-14",
-                    "additional_info": {
-                        "valid": True,
-                        "related_activities": [
-                            {"id": 3, "name": "Sub Activity 1", "sin": ["aa", "bb" ]},
-                            {"id": 4, "name": "Sub Activity 2", "ss": {"aa": [1, 2,3]}},
-
-                        ]
-                    }
-                }
-            }
-        },
-        {
-            "hash2": {
-                "id": 2,
-                "name": "Activity 2",
-                "details": {
-                    "description": "Detail 2",
-                    "timestamp": "2024-10-15",
-                    "starttime": "10:00 AM",
-                    "endtime": "11:00 AM",
-                    "additional_info": {
-                        "valid": False,
-                        "location": "Conference Room A"
-                    }
-                }
-            }
-        }
-    ]
-
+    user = User(name="AAA", email="xx@gmail.com")
+    for _ in range(10):
+        event = FraudEvent(
+            account_id=f"user{randint(100, 999)}",
+            tx_hash=f"hash_{randint(1000, 9999)}_{choice(['A', 'B', 'C', 'D'])}",
+            timestamp=randint(1634567800, 1634567900),  # Random timestamps
+            event_type=choice(["fraud_event", "suspicious_activity"])
+        )
+        user.timeline.add_event(event)
+    activities = [event.dict() for event in user.timeline.get_timeline()]
+    # Sort activities by timestamp if necessary
+    activities.sort(key=lambda x: x['timestamp'])  # Ensure events are in chronological order
     return templates.TemplateResponse("activity.html", {"request": request, "activities": activities})
-
 
 
 
