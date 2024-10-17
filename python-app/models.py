@@ -1,31 +1,36 @@
 from collections import OrderedDict
 from typing import List
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl
 
-class FraudEvent(BaseModel):
+
+
+
+class FraudEventOut(BaseModel):
     account_id: str = Field(..., alias="AccountId")
     tx_hash: str = Field(..., alias="TxHash")
     timestamp: int = Field(..., alias="Timestamp")
-    event_type: str = Field(..., alias="Type")  # 'Type' is renamed to 'event_type'
+    types: list[str] = Field(..., alias="Types")  # 'Types' is renamed to 'event_types'
+    transaction_url: str
 
     class Config:
         populate_by_name = True  # Allows using the snake_case names
         # Add this to allow both styles:
         str_strip_whitespace = True  # Strips whitespace f
 
+
 class UserTimeline:
     def __init__(self):
         # An OrderedDict to store events by their timestamp
-        self.timeline: OrderedDict[int, List[FraudEvent]] = OrderedDict()
+        self.timeline: OrderedDict[int, List[FraudEventOut]] = OrderedDict()
 
-    def add_event(self, event: FraudEvent):
+    def add_event(self, event: FraudEventOut):
         # Add the event to the timeline, grouped by timestamp
         if event.timestamp not in self.timeline:
             self.timeline[event.timestamp] = []
         self.timeline[event.timestamp].append(event)
 
-    def get_timeline(self)  -> List[FraudEvent]:
+    def get_timeline(self)  -> List[FraudEventOut]:
         # Return the ordered timeline
         return [event for events in self.timeline.values() for event in events]
 
@@ -47,3 +52,12 @@ class User:
     def __repr__(self) -> str:
         # Optional: Custom representation for developers
         return self.__str__()
+
+
+class UserInfo:
+    def __init__(self, name: str, email: str):
+        self.name = name
+        self.email = email
+
+async def get_user_info(current_user: dict) -> UserInfo:
+    return UserInfo(name=current_user["name"], email=current_user["email"])

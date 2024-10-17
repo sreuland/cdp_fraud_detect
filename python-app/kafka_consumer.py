@@ -1,11 +1,12 @@
 import asyncio
 import json
 import logging
+import os
 
 from aiokafka import AIOKafkaConsumer
 from pydantic import  ValidationError
 
-from models import FraudEvent, User
+from models import User, FraudEventOut
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 from kafka_config import KAFKA_FRAUD_TOPIC, KAFKA_BOOTSTRAP_SERVERS
 
+HORIZON_TX_URL = os.getenv("HORIZON_TX_URL", "https://horizon-testnet.stellar.org/transactions")
 
 # Kafka consumer class using aiokafka
 class AccountActivityConsumer:
@@ -32,16 +34,22 @@ class AccountActivityConsumer:
     async def process_message(self, message):
         try:
             json_data = json.loads(message.value.decode('utf-8'))
-            logger.info(f"******* received raw dict on kafak - {json_data}")
+
+            logger.info(f"******* received raw dict on kafka - {json_data}")
 
             # Normalize keys to snake_case if needed
-            normalized_data = {
-                "account_id": json_data.get("account_id") or json_data.get("AccountId"),
-                "tx_hash": json_data.get("tx_hash") or json_data.get("TxHash"),
-                "timestamp": json_data.get("timestamp") or json_data.get("Timestamp"),
-                "event_type": json_data.get("event_type") or json_data.get("Type")
-            }
-            message = FraudEvent.model_validate(normalized_data)
+            account_id=json_data.get("account_id") or json_data.get("AccountId")
+            tx_hash=json_data.get("tx_hash") or json_data.get("TxHash")
+            timestamp=json_data.get("timestamp") or json_data.get("Timestamp")
+            types=json_data.get("event_types") or json_data.get("Types")
+
+            message = FraudEventOut(
+                account_id=account_id,
+                tx_hash=tx_hash,
+                timestamp=timestamp,
+                types=types,
+                transaction_url=f"{HORIZON_TX_URL}/{tx_hash}"
+            )
 
             logger.info(f"Received activity for account: {message.account_id}")
 

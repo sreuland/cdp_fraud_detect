@@ -51,8 +51,10 @@ async def get_current_user(access_token: str = Cookie(None)):
         # Retrieve user information with the access token
         user_info_response = await client.get(GOOGLE_USERINFO_URL, headers={"Authorization": f"Bearer {access_token}"})
         user_info_response.raise_for_status()
+        user_data = user_info_response.json()
+        logger.info(f"get_current_user returned : {user_data}")
 
-        return user_info_response.json()
+        return user_data
 
 
 async def revoke_google_token(access_token: str):

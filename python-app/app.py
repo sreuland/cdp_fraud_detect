@@ -12,7 +12,7 @@ from fastapi.templating import Jinja2Templates
 
 from kafka_config import KAFKA_BOOTSTRAP_SERVERS, KAFKA_FRAUD_TOPIC
 from kafka_consumer import start_kafka_consumer
-from models import User, FraudEvent
+from models import User
 from oauth import router as oauth_router
 from fastapi.responses import RedirectResponse, JSONResponse
 import logging
@@ -103,7 +103,7 @@ async def add_account(account_address: str = Form(...), current_user: dict = Dep
         user_db[email] = User(name, email)
 
     user = user_db[email]
-    logger.info(f"--------  User = {user}")
+
     # Reverse mapping from account_address to list of interested users
     user.accounts.append(account_address)
     accounts_to_users[account_address].add(user)
@@ -117,7 +117,7 @@ async def delete_account(account_address: str = Form(...), current_user: dict = 
     if email not in user_db:
         user_db[email] = User(name, email)
 
-    user = user_db.get(current_user["email"])
+    user = user_db.get(email)
     if account_address in user.accounts:
         user.accounts.remove(account_address)  # Remove the account from the user's list
     accounts_to_users[account_address].discard(user)  # Remove user from the account's interested users
@@ -137,6 +137,10 @@ async def set_register_for_all(request: Request, current_user: dict = Depends(ge
         user: Optional[User] = user_db.get(current_user["email"])
         user.register_for_all = register_for_all
         if user.register_for_all:
+            # remove accounts_to_users mapping
+            for account in user.accounts:
+                accounts_to_users[account].discard(user)
+
             user.accounts = []  # Clear accounts if "Register for all" is enabled
             starred_users.add(user)
         else:
@@ -151,18 +155,24 @@ async def set_register_for_all(request: Request, current_user: dict = Depends(ge
 
 
 @app.get("/activity", response_class=templates.TemplateResponse)
-async def activity(request: Request):
+async def activity(request: Request, current_user: dict = Depends(get_current_user)):
+    """
     # Simulating some JSON data for the activity
     user = User(name="AAA", email="xx@gmail.com")
     for _ in range(10):
-        event = FraudEvent(
+        event = FraudEventOut(
             account_id=f"user{randint(100, 999)}",
             tx_hash=f"hash_{randint(1000, 9999)}_{choice(['A', 'B', 'C', 'D'])}",
             timestamp=randint(1634567800, 1634567900),  # Random timestamps
-            event_type=choice(["fraud_event", "suspicious_activity"])
+            event_type=choice(["fraud_event", "suspicious_activity"]),
+            tx_url="https://google.com"
         )
         user.timeline.add_event(event)
-    activities = [event.dict() for event in user.timeline.get_timeline()]
+    """
+    name, email = current_user.get("name", ""), current_user.get("email", "")
+    user = user_db.get(email)
+
+    activities = [event.model_dump() for event in user.timeline.get_timeline()]
     # Sort activities by timestamp if necessary
     activities.sort(key=lambda x: x['timestamp'])  # Ensure events are in chronological order
     return templates.TemplateResponse("activity.html", {"request": request, "activities": activities})
