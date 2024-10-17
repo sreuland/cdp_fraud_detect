@@ -31,6 +31,9 @@ services:
     environment:
       - SECRET_FILE=/app/client_secret.json
       - KAFKA_BOOTSTRAP_SERVERS=kafka-service:9092
+      - HORIZON_TX_URL=https://horizon-testnet.stellar.org/transactions
+      - KAFKA_FRAUD_TOPIC=ledger.events.fraud
+      - KAFKA_CONSUMER_GROUP=webapp-fraud-service
     ports:
       - "8000:8000"
     depends_on:

@@ -12,9 +12,8 @@ from models import User, FraudEventOut
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-from kafka_config import KAFKA_FRAUD_TOPIC, KAFKA_BOOTSTRAP_SERVERS
+from kafka_config import KAFKA_FRAUD_TOPIC, KAFKA_BOOTSTRAP_SERVERS, HORIZON_TX_URL
 
-HORIZON_TX_URL = os.getenv("HORIZON_TX_URL", "https://horizon-testnet.stellar.org/transactions")
 
 # Kafka consumer class using aiokafka
 class AccountActivityConsumer:
