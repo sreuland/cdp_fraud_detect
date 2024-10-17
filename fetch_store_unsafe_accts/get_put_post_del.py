@@ -2,57 +2,20 @@ import os
 import lmdb
 import json
 
-# PUT ops data
-addresses_to_insert = [
-    #"GINSERTNEWADDRESS1234567890",
-    #"GINSERTNEWADDRESS0987654321"
-]
-data_to_insert = [
-    {
-        'address': "GINSERTNEWADDRESS1234567890",
-        'domain': 'example.com',
-        'name': 'Example Name 1',
-        'tags': ['unsafe']
-    },
-    {
-        'address': "GINSERTNEWADDRESS0987654321",
-        'domain': 'another-example.com',
-        'name': 'Example Name 2',
-        'tags': ['malicious']
-    }
-]
+# Load configuration from test_data_config.json
+with open('./fetch_store_unsafe_accts/test_data_config.json', 'r') as f:
+    config = json.load(f)
 
-# POST ops data
-addresses_to_update = [
-    #"GAEDLNMCQZOSLY7Y4NW3DTEWQEVVCXYYMBDNGPPGBMQH4GFYECBI7YVK",
-    #"GA3WKI3NHYHN7VQQZE2XA2PNUDLLET7VQO5JIMSMEVWUHJEJBLHWGJDI"
-]
-data_to_update = [
-    {
-        'address': "GAEDLNMCQZOSLY7Y4NW3DTEWQEVVCXYYMBDNGPPGBMQH4GFYECBI7YVK",
-        'domain': 'updated-domain.com',
-        'name': 'Updated Name 1',
-        'tags': ['malicious', 'unsafe']
-    },
-    {
-        'address': "GA3WKI3NHYHN7VQQZE2XA2PNUDLLET7VQO5JIMSMEVWUHJEJBLHWGJDI",
-        'domain': 'yet-another-domain.com',
-        'name': 'Updated Name 2',
-        'tags': ['safe']
-    }
-]
+# Extract data from configuration
+addresses_to_insert = config['put_operations']['addresses_to_insert']
+data_to_insert = config['put_operations']['data_to_insert']
 
-# DEL ops data
-addresses_to_delete = [
-    #"GA5U3QQQRZABN5ENSNZ3ELCCRPJBPJRKZL5RA5URQMCKQN5OLB7SJVI4",
-    #"GA3WKI3NHYHN7VQQZE2XA2PNUDLLET7VQO5JIMSMEVWUHJEJBLHWGJDI"
-]
+addresses_to_update = config['post_operations']['addresses_to_update']
+data_to_update = config['post_operations']['data_to_update']
 
-# GET ops data
-addresses_to_get = [
-    "GAEDLNMCQZOSLY7Y4NW3DTEWQEVVCXYYMBDNGPPGBMQH4GFYECBI7YVK",
-    "GINSERTNEWADDRESS1234567890"
-]
+addresses_to_delete = config['delete_operations']['addresses_to_delete']
+
+addresses_to_get = config['get_operations']['addresses_to_get']
 
 def insert_data(env, addresses, data_list):
     with env.begin(write=True) as txn:

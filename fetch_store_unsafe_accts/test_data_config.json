@@ -1,0 +1,55 @@
+{
+    "put_operations": {
+      "addresses_to_insert": [
+        "GBBVMABET5UTIJM7IPW3TUI2UXALQXXINBKYTB6PIF5QE7RB4DMYJPOF",
+        "GBQ3QCMC4LRW3JUCHORIKOTWNPQBZNWOTTIZIULMWS4VMFHRUDNHJA3R",
+        "GAUJW4CUUTBKIVUTXPQARDUSSPVDLXKMFAPAK64QWJXQ4I75C4ORQ4OR"
+      ],
+      "data_to_insert": [
+        {
+          "address": "GBBVMABET5UTIJM7IPW3TUI2UXALQXXINBKYTB6PIF5QE7RB4DMYJPOF",
+          "domain": "fraud_account.com",
+          "name": "fraud account 1",
+          "tags": ["unsafe"]
+        },
+        {
+          "address": "GBQ3QCMC4LRW3JUCHORIKOTWNPQBZNWOTTIZIULMWS4VMFHRUDNHJA3R",
+          "domain": "bad_account.com",
+          "name": "fraud account 2",
+          "tags": ["malicious"]
+        },
+        {
+          "address": "GAUJW4CUUTBKIVUTXPQARDUSSPVDLXKMFAPAK64QWJXQ4I75C4ORQ4OR",
+          "domain": "unsafe_account.com",
+          "name": "fraud account 3",
+          "tags": ["unsafe,malicious"]
+        }
+      ]
+    },
+    "post_operations": {
+      "addresses_to_update": [
+      ],
+      "data_to_update": [
+        {
+          "address": "GAEDLNMCQZOSLY7Y4NW3DTEWQEVVCXYYMBDNGPPGBMQH4GFYECBI7YVK",
+          "domain": "updated-domain.com",
+          "name": "Updated Name 1",
+          "tags": ["malicious", "unsafe"]
+        },
+        {
+          "address": "GA3WKI3NHYHN7VQQZE2XA2PNUDLLET7VQO5JIMSMEVWUHJEJBLHWGJDI",
+          "domain": "yet-another-domain.com",
+          "name": "Updated Name 2",
+          "tags": ["safe"]
+        }
+      ]
+    },
+    "delete_operations": {
+      "addresses_to_delete": [
+      ]
+    },
+    "get_operations": {
+      "addresses_to_get": [
+      ]
+    }
+  }
