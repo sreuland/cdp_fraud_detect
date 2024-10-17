@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    container_name: kafka-service
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-service:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  fraud_data_fetch:
+    build:
+      context: .
+      dockerfile: Dockerfile_fraud_data_fetch
+    volumes:
+      - ./fetch_store_unsafe_accts:/app/fetch_store_unsafe_accts
+      - ./fraud_accts_data:/app/fraud_accts_data
+    environment:
+      FETCH_INTERVAL_MINUTES: 10
+      DOCKER_ENV: "true"
+    command: ["python", "fetch_store_unsafe_accts/fetch_and_store.py"]
+    ports:
+      - "8080:8080"
+
+  web_app_kafka:
+    build:
+      context: .
+      dockerfile: Dockerfile_web_app_kafka
+    ports:
+      - "8000:8000"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka-service:9092
+    depends_on:
+      - kafka
+    restart: always
