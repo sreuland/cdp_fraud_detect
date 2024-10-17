@@ -1,4 +1,4 @@
-module example/cdp_fraud_detect
+module deceptiscan/cdp_processor
 
 go 1.22
 

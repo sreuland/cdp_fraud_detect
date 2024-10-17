@@ -274,11 +274,15 @@ func main() {
 	lmdbPath := os.Getenv("LMDB_PATH")
 	kafkaBootstrapServer := os.Getenv("KAFKA_BOOTSTRAP_SERVER")
 	kafkaTopic := os.Getenv("KAFKA_TOPIC")
+	cdpToml := os.Getenv("CDP_TOML")
+	if cdpToml == "" {
+		cdpToml = "config.toml"
+	}
 	// run a data pipeline that transforms Pubnet ledger metadata into fraud events
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer stop()
 
-	cfg, err := toml.LoadFile("config.toml")
+	cfg, err := toml.LoadFile(cdpToml)
 	if err != nil {
 		fmt.Printf("config.toml shoule be accessible in current directdory: %v\n", err)
 		return
