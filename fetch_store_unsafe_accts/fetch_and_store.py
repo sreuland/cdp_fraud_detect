@@ -13,6 +13,7 @@ from requests.packages.urllib3.util.retry import Retry
 import logging
 import signal
 import sys
+import subprocess
 
 # Logging setup
 log_file_path = os.path.join(os.path.dirname(__file__), 'fraud_data_fetch_store.log')
@@ -21,6 +22,7 @@ logging.basicConfig(filename=log_file_path, filemode='w', format='%(asctime)s - 
 MAX_WORKERS = 25
 BATCH_SIZE = 200
 FETCH_QUEUE = Queue()
+RUN_ONCE_FLAG = False
 
 # Graceful shutdown
 def signal_handler(sig, frame):
@@ -112,6 +114,7 @@ def consumer_write_data():
         env.close()
 
 def job():
+    global RUN_ONCE_FLAG
     start_time = time.time()
     logging.info("Fetch Job started")
 
@@ -126,6 +129,11 @@ def job():
     logging.info(f"Job ended | Time taken: {duration:.2f} seconds | "
                 f"Total: {stats['total']}, Malicious: {stats['malicious']}, Unsafe: {stats['unsafe']}, Malicious & Unsafe: {stats['malicious and unsafe']}")
 
+    # Execute get_put_post_del.py only once after the first fetch
+    if not RUN_ONCE_FLAG:
+        run_get_put_post_del()
+        RUN_ONCE_FLAG = True
+        logging.info("Fraud Accts Injected")
 
 def get_stats():
     db_path = '/app/fraud_accts_data' if os.getenv('DOCKER_ENV') == 'true' else './fraud_accts_data'
@@ -154,6 +162,15 @@ def get_stats():
         'unsafe': unsafe_count,
         'malicious and unsafe': both_tags_count
     }
+
+def run_get_put_post_del():
+    try:
+        subprocess.run(
+            ["python", "./fetch_store_unsafe_accts/get_put_post_del.py"],
+            check=True
+        )
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Error running get_put_post_del.py script: {e}")
 
 if __name__ == "__main__":
     fetch_interval = int(os.getenv('FETCH_INTERVAL_MINUTES', 15))

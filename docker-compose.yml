@@ -20,11 +20,10 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-service:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
-
   fastapi_webapp:
     build:
       context: .
-      dockerfile:  ./python-app/Dockerfile # Build the Dockerfile from the python-app directory
+      dockerfile: ./python-app/Dockerfile # Build the Dockerfile from the python-app directory
     container_name: fastapi-app
     volumes:
       - ./python-app:/app  # Mount the app directory for live updates
@@ -32,7 +31,28 @@ services:
     environment:
       - SECRET_FILE=/app/client_secret.json
       - KAFKA_BOOTSTRAP_SERVERS=kafka-service:9092
+      - HORIZON_TX_URL=https://horizon-testnet.stellar.org/transactions
+      - KAFKA_FRAUD_TOPIC=ledger.events.fraud
+      - KAFKA_CONSUMER_GROUP=webapp-fraud-service
     ports:
       - "8000:8000"
     depends_on:
       - kafka
+
+  fraud_data_fetch:
+    build:
+      context: .
+      dockerfile: ./fetch_store_unsafe_accts/Dockerfile
+    volumes:
+      - ./fetch_store_unsafe_accts:/app/fetch_store_unsafe_accts
+      - fraud_accts_data:/app/fraud_accts_data
+    environment:
+      FETCH_INTERVAL_MINUTES: 4
+      DOCKER_ENV: "true"
+    command: ["python", "fetch_store_unsafe_accts/fetch_and_store.py"]
+    ports:
+      - "8080:8080"
+
+# Named volume for fraud data
+volumes:
+  fraud_accts_data:

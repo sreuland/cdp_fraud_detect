@@ -16,3 +16,6 @@ starlette
 httpx
 kafka-python
 python-dotenv
+requests
+lmdb
+schedule
