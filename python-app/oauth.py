@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, Cookie
+from fastapi import APIRouter, Cookie, status
 from fastapi.responses import RedirectResponse
 from oauth_utils import get_google_user_info, GOOGLE_CLIENT_ID, GOOGLE_REDIRECT_URI, revoke_google_token
 
@@ -37,6 +37,6 @@ async def logout(response: RedirectResponse, access_token: str = Cookie(None)):
     if access_token:
         # (Optional) Add revoke_google_token function to invalidate token
         await revoke_google_token(access_token)
-    response = RedirectResponse(url="/")
+    response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
     response.delete_cookie(key="access_token")
     return response
