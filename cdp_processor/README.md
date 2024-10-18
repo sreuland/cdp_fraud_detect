@@ -7,6 +7,7 @@ KAFKA_BOOTSTRAP_SERVER
 KAFKA_TOPIC
 Optional env variable:
 CDP_TOML, if absent, looks for 'config.toml' in process working directory.
+SEED_ACCOUNTS, if 'true' will generate and fund four accounts on testnet and insert 3 of them into fraud accounts lookup data with unsafe/malicious tags, and logs to console the pub/priv key pairs for each.  
 
 Make sure to have a valid GCS authentication context to access the GCS bucket in config.toml - https://cloud.google.com/docs/authentication/application-default-credentials#personal 
 

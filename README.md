@@ -42,7 +42,10 @@ Sample `client_secret.json` file
   * The processing is pre-set for Testnet network, it has been hardcoded to testnet history archives and passphrase.
 
 
-4. Create and fund four test accounts on Testnet using [Stellar Laboratory](https://lab.stellar.org/account/create?$=network$id=testnet&label=Testnet&horizonUrl=https:////horizon-testnet.stellar.org&rpcUrl=https:////soroban-testnet.stellar.org&passphrase=Test%20SDF%20Network%20/;%20September%202015;&endpoints$params$order=desc&limit=200;;&transaction$build$operations@$operation_type=&params@;;):
+4. Create and fund four test accounts on Testnet. You have 3 choices on how to go about it:
+  * use [Stellar Laboratory](https://lab.stellar.org/account/create?$=network$id=testnet&label=Testnet&horizonUrl=https:////horizon-testnet.stellar.org&rpcUrl=https:////soroban-testnet.stellar.org&passphrase=Test%20SDF%20Network%20/;%20September%202015;&endpoints$params$order=desc&limit=200;;&transaction$build$operations@$operation_type=&params@;;):
+  * User Stellar Freighter browser extension.
+  * Enable the account seeding tool, [SEED_ACCOUNTS](./docker-compose.yml#L55), it is includefd in this repo. When enabled, will also inject the accounts into the local fraudulent accounts data(can skip step #5)
 
 afterwards, you should have four public account id's:
 
@@ -55,8 +58,9 @@ Acc-3 = `G...`
 Acc-4 = `G...`
 
 
-5. Acc-1, Acc-2 and Acc-3 can be artificially inserted into the local fraudulent accounts data, which are also fed externally from stellarxpert feed, this is to facilitate repeateable demo, as these new accounts won't be marked as fraudulent in stellarxpert feed.
+5. Acc-1, Acc-2 and Acc-3 can be artificially inserted into the local fraudulent accounts data, which are also fed externally from stellarxpert feed, this is to facilitate repeateable demo, as these new accounts won't be marked as fraudulent in stellarxpert feed. Skip this step if you used [SEED_ACCOUNTS](./docker-compose.yml#L55) during step #4, it's been done for you.
   * Edit ./fetch_store_unsafe_accts/test_data_config.json, and set the account addresses you just created into that file, when demo is started, they will be seeded automatically into local fraudulent accounts data. 
+
 
 ### Build and Run the Demo
 
