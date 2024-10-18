@@ -39,7 +39,7 @@ type FraudDetectionService interface {
 }
 
 type fraudulentLmdbValueModel struct {
-	tags []string
+	Tags []string
 }
 
 func (service *FraudDetector) Close() {
@@ -61,7 +61,7 @@ func (service *FraudDetector) GetFraudulentAccount(accountId string) (*FraudDete
 		if err := json.Unmarshal(value, &valueModel); err != nil {
 			return errors.Wrap(err, "unmarshaling json")
 		}
-		result = &FraudDetection{FraudTypes: valueModel.tags}
+		result = &FraudDetection{FraudTypes: valueModel.Tags}
 		return nil
 	})
 
