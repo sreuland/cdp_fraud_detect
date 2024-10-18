@@ -333,7 +333,8 @@ func main() {
 	fraudDetectionTransformer.Subscribe(outboundAdapter)
 	ledgerMetadataInboundAdapter.Subscribe(fraudDetectionTransformer)
 
-	seedAccounts(lmdbPath)
+	// not needed ...
+	//seedAccounts(lmdbPath)
 	log.Printf("Fraud detection pipeline ended %v\n", ledgerMetadataInboundAdapter.Run(ctx))
 }
 
