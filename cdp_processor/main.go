@@ -12,11 +12,14 @@ import (
 
 	"github.com/pelletier/go-toml"
 	"github.com/pkg/errors"
+	"github.com/stellar/go/clients/horizonclient"
 	"github.com/stellar/go/historyarchive"
 	"github.com/stellar/go/ingest"
 	"github.com/stellar/go/ingest/cdp"
 	"github.com/stellar/go/ingest/ledgerbackend"
+	"github.com/stellar/go/keypair"
 	"github.com/stellar/go/network"
+	"github.com/stellar/go/strkey"
 	"github.com/stellar/go/support/datastore"
 	"github.com/stellar/go/support/storage"
 	"github.com/stellar/go/xdr"
@@ -39,7 +42,10 @@ type FraudDetectionService interface {
 }
 
 type fraudulentLmdbValueModel struct {
-	Tags []string
+	Tags    []string
+	Address string
+	Domain  string
+	Name    string
 }
 
 func (service *FraudDetector) Close() {
@@ -326,5 +332,109 @@ func main() {
 	// wire up the ingestion pipeline and let it run
 	fraudDetectionTransformer.Subscribe(outboundAdapter)
 	ledgerMetadataInboundAdapter.Subscribe(fraudDetectionTransformer)
+
+	seedAccounts(lmdbPath)
 	log.Printf("Fraud detection pipeline ended %v\n", ledgerMetadataInboundAdapter.Run(ctx))
+}
+
+func seedAccounts(lmdbPath string) {
+
+	fraudAccounts := []fraudulentLmdbValueModel{}
+
+	acc1Kp := keypair.MustRandom()
+	horizonclient.DefaultTestNetClient.Fund(acc1Kp.Address())
+
+	acc1 := fraudulentLmdbValueModel{
+		Tags:    []string{"unsafe"},
+		Address: acc1Kp.Address(),
+		Domain:  "domain.com",
+		Name:    "acc 1",
+	}
+	fraudAccounts = append(fraudAccounts, acc1)
+	fmt.Printf("Generated Fake Account #1, as fraud unsafe: \npub: %v\npriv: %v\n\n", acc1Kp.Address(), strkey.MustEncode(strkey.VersionByteSeed, []byte(acc1Kp.Seed())))
+
+	acc2Kp := keypair.MustRandom()
+	horizonclient.DefaultTestNetClient.Fund(acc1Kp.Address())
+
+	acc2 := fraudulentLmdbValueModel{
+		Tags:    []string{"malicious"},
+		Address: acc2Kp.Address(),
+		Domain:  "domain.com",
+		Name:    "acc 2",
+	}
+	fraudAccounts = append(fraudAccounts, acc2)
+	fmt.Printf("Generated Fake Account #2, as fraud malicious: \npub: %v\npriv: %v\n\n", acc2Kp.Address(), strkey.MustEncode(strkey.VersionByteSeed, []byte(acc2Kp.Seed())))
+
+	acc3Kp := keypair.MustRandom()
+	horizonclient.DefaultTestNetClient.Fund(acc3Kp.Address())
+
+	acc3 := fraudulentLmdbValueModel{
+		Tags:    []string{"malicious", "unsafe"},
+		Address: acc2Kp.Address(),
+		Domain:  "domain.com",
+		Name:    "acc 2",
+	}
+	fraudAccounts = append(fraudAccounts, acc3)
+	fmt.Printf("Generated Fake Account #3, as fraud malicious, unsafe: \npub: %v\npriv: %v\n\n", acc3Kp.Address(), strkey.MustEncode(strkey.VersionByteSeed, []byte(acc3Kp.Seed())))
+
+	acc4Kp := keypair.MustRandom()
+	horizonclient.DefaultTestNetClient.Fund(acc4Kp.Address())
+	fmt.Printf("Generated Fake Account #4, no fraud: \npub: %v\npriv: %v\n\n", acc4Kp.Address(), strkey.MustEncode(strkey.VersionByteSeed, []byte(acc4Kp.Seed())))
+
+	// create an environment and make sure it is eventually closed.
+	env, err := lmdb.NewEnv()
+	if err != nil {
+		log.Panicf("can't seed accounts, %v", err)
+	}
+	defer env.Close()
+
+	err = env.SetMaxDBs(1)
+	if err != nil {
+		log.Panicf("can't seed accounts, %v", err)
+	}
+	err = env.SetMapSize(1 << 30)
+	if err != nil {
+		log.Panicf("can't seed accounts, %v", err)
+	}
+	err = env.Open(lmdbPath, 0, fs.FileMode(uint(0777)))
+	if err != nil {
+		log.Panicf("can't seed accounts, %v", err)
+	}
+
+	staleReaders, err := env.ReaderCheck()
+	if err != nil {
+		log.Panicf("can't seed accounts, %v", err)
+	}
+	if staleReaders > 0 {
+		log.Printf("cleared %d reader slots from dead processes", staleReaders)
+	}
+
+	var dbi lmdb.DBI
+	err = env.Update(func(txn *lmdb.Txn) (err error) {
+		dbi, err = txn.OpenRoot(0)
+		return err
+	})
+	if err != nil {
+		log.Panicf("can't seed accounts, %v", err)
+	}
+
+	for _, account := range fraudAccounts {
+		err = env.Update(func(txn *lmdb.Txn) (err error) {
+
+			jsonBytes, err := json.Marshal(account)
+			if err != nil {
+				return err
+			}
+
+			err = txn.Put(dbi, []byte(account.Address), jsonBytes, 0)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+
+		if err != nil {
+			log.Panicf("can't seed fraud accounts, %v", err)
+		}
+	}
 }
