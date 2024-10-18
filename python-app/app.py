@@ -26,22 +26,24 @@ logger.setLevel(logging.INFO)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Starting Kafka consumer during application startup...")
+    """
+    logger.info("Starting Kafka producer during application startup...")
     producer = AIOKafkaProducer(
         bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS  # Adjust if your Kafka server is different
     )
     await producer.start()
     app.state.producer = producer
+    """
 
-    logger.info("Starting Kafka producer during application startup...")
+    logger.info("Starting Kafka consumer during application startup...")
     consumer_task = asyncio.create_task(start_kafka_consumer(user_db, accounts_to_users, starred_users))
 
     try:
         yield
     finally:
-        logger.info("Shutting down Kafka producer...")
-        await producer.stop()  # Ensure the producer is stopped properly
-        logger.info("Kafka producer has been shut down.")
+        # logger.info("Shutting down Kafka producer...")
+        # await producer.stop()  # Ensure the producer is stopped properly
+        # logger.info("Kafka producer has been shut down.")
 
         logger.info("Shutting down Kafka consumer...")
         consumer_task.cancel()  # Cancel the consumer task
@@ -183,6 +185,7 @@ async def activity(request: Request, current_user: dict = Depends(get_current_us
 async def get_producer() -> AIOKafkaProducer:
     return app.state.producer
 
+"""
 @app.post("/push_message")
 async def push_message(message: dict, producer: AIOKafkaProducer = Depends(get_producer)):
     try:
@@ -193,6 +196,7 @@ async def push_message(message: dict, producer: AIOKafkaProducer = Depends(get_p
     except Exception as e:
         logger.error(f"Failed to send message to Kafka: {e}")
         return {"status": "error", "message": "Failed to send message."}
+"""
 
 
 

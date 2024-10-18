@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel, Field, HttpUrl
 
@@ -10,7 +10,7 @@ class FraudEventOut(BaseModel):
     account_id: str = Field(..., alias="AccountId")
     tx_hash: str = Field(..., alias="TxHash")
     timestamp: int = Field(..., alias="Timestamp")
-    types: list[str] = Field(..., alias="Types")  # 'Types' is renamed to 'event_types'
+    types: Optional[list[str]] = Field(None, alias="Types")  # 'Types' is now optional
     transaction_url: str
 
     class Config:

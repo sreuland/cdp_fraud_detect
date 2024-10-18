@@ -1,6 +1,32 @@
 # cdp_fraud_detect
 cdp hackathon
 
+## Setup Prerequisites
+1. The fast-api python web-app leverages Google Oauth, so you will need to create and register your Web-app as a oauth client. Please follow instructions [here](https://www.youtube.com/shorts/WABhO9KsOpU)
+2. You will need to provide the credentials from the previous step to the webapp in a `client_secret.json` file
+This file will have Oauth credentials - specifically, client_id, client_secret, the URI for redirection, once you are OAuthed by Google. You can find these credentials from the Credential tab on your `https://console.cloud.google.com/apis/credentials` and can download a JSON file .
+
+Sample `client_secret.json` file
+
+```commandline
+{
+  "web": {
+    "client_id": "xxx",
+    "project_id": "xxx",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_secret": "xxx",
+    "redirect_uris": [
+      "http://localhost:8000/callback"   ---> This should match what you have configured on step 2, when creating your OAuth Client on Google
+    ],
+    "javascript_origins": [
+      "http://localhost:8000"
+    ]
+  }
+}
+```
+
 ## How to Build/Run/Demo
 
 ### Pre-reqs:
