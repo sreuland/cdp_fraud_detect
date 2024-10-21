@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 
 	"github.com/pelletier/go-toml"
 	"github.com/pkg/errors"
@@ -281,6 +282,7 @@ func main() {
 	kafkaBootstrapServer := os.Getenv("KAFKA_BOOTSTRAP_SERVER")
 	kafkaTopic := os.Getenv("KAFKA_TOPIC")
 	cdpToml := os.Getenv("CDP_TOML")
+	generateSeed := os.Getenv("SEED_ACCOUNTS")
 	if cdpToml == "" {
 		cdpToml = "config.toml"
 	}
@@ -333,8 +335,9 @@ func main() {
 	fraudDetectionTransformer.Subscribe(outboundAdapter)
 	ledgerMetadataInboundAdapter.Subscribe(fraudDetectionTransformer)
 
-	// not needed ...
-	//seedAccounts(lmdbPath)
+	if strings.ToLower(generateSeed) == "true" {
+	    seedAccounts(lmdbPath)
+	}
 	log.Printf("Fraud detection pipeline ended %v\n", ledgerMetadataInboundAdapter.Run(ctx))
 }
 

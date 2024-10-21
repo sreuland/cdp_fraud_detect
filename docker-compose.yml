@@ -49,6 +49,10 @@ services:
     environment:
       GOOGLE_APPLICATION_CREDENTIALS: /.config/gcp/credentials.json
       KAFKA_BOOTSTRAP_SERVER: kafka-service:9092
+      # set SEED_ACCOUNTS to "true" to trigger generation of four accounts 
+      # on testnet and insert 3 of them into fraud accounts lookup data with 
+      # unsafe/malicious tags, log to console the pub/priv key pairs for each.
+      SEED_ACCOUNTS: "true"
     depends_on:
       - kafka 
       - fraud_data_fetch

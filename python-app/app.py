@@ -9,6 +9,7 @@ from fastapi import FastAPI, Depends, Form, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 
 from kafka_consumer import start_kafka_consumer
 from models import User
@@ -17,7 +18,6 @@ from oauth_utils import get_current_user
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -48,10 +48,13 @@ async def lifespan(app: FastAPI):
 # App startup
 templates = Jinja2Templates(directory="templates")
 
-
 app = FastAPI(
    lifespan=lifespan
 )
+
+# Mount static files for serving images and other static content
+app.mount("/static", StaticFiles(directory="templates/images"), name="static")
+
 # Include OAuth routes
 app.include_router(oauth_router)
 
@@ -64,11 +67,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # User database simulation
 user_db: dict[str, User] = {}
 accounts_to_users: dict[str, set[User]] = defaultdict(set)
-
 starred_users: set[User] = set()
 
 @app.get("/")
@@ -92,7 +93,6 @@ async def dashboard(request: Request, current_user: dict = Depends(get_current_u
         "register_for_all": user.register_for_all if user else False  # Pass the flag
     })
 
-
 @app.post("/add_account", response_class=RedirectResponse)
 async def add_account(account_address: str = Form(...), current_user: dict = Depends(get_current_user)):
     name, email = current_user.get("name", ""), current_user.get("email", "")
@@ -106,7 +106,6 @@ async def add_account(account_address: str = Form(...), current_user: dict = Dep
     accounts_to_users[account_address].add(user)
 
     return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
-
 
 @app.post("/delete_account", response_class=RedirectResponse)
 async def delete_account(account_address: str = Form(...), current_user: dict = Depends(get_current_user)):
@@ -148,9 +147,6 @@ async def set_register_for_all(request: Request, current_user: dict = Depends(ge
 
     return JSONResponse(content={"status": "error", "message": "Invalid request."}, status_code=400)
 
-
-
-
 @app.get("/activity", response_class=templates.TemplateResponse)
 async def activity(request: Request, current_user: dict = Depends(get_current_user)):
     """
@@ -174,9 +170,6 @@ async def activity(request: Request, current_user: dict = Depends(get_current_us
     activities.sort(key=lambda x: x['timestamp'])  # Ensure events are in chronological order
     return templates.TemplateResponse("activity.html", {"request": request, "activities": activities})
 
-
-
-
 async def get_producer() -> AIOKafkaProducer:
     return app.state.producer
 
@@ -193,11 +186,6 @@ async def push_message(message: dict, producer: AIOKafkaProducer = Depends(get_p
         return {"status": "error", "message": "Failed to send message."}
 """
 
-
-
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="localhost", port=8000)
-
-
-
