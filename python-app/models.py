@@ -1,8 +1,15 @@
 from collections import OrderedDict
+from dataclasses import dataclass
 from typing import List, Optional
 
 from pydantic import BaseModel, Field, HttpUrl
 
+@dataclass
+class Email:
+    name: str
+    email: str
+    account_address: str
+    tx_url: str
 
 
 

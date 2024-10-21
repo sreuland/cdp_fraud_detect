@@ -6,7 +6,8 @@ import os
 from aiokafka import AIOKafkaConsumer
 from pydantic import  ValidationError
 
-from models import User, FraudEventOut
+from email_utils import send_email
+from models import User, FraudEventOut, Email
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -41,23 +42,28 @@ class AccountActivityConsumer:
             tx_hash=json_data.get("tx_hash") or json_data.get("TxHash")
             timestamp=json_data.get("timestamp") or json_data.get("Timestamp")
             types=json_data.get("event_types") or json_data.get("Types")
-
+            tx_url = f"{HORIZON_TX_URL}/{tx_hash}"
             message = FraudEventOut(
                 account_id=account_id,
                 tx_hash=tx_hash,
                 timestamp=timestamp,
                 types=types,
-                transaction_url=f"{HORIZON_TX_URL}/{tx_hash}"
+                transaction_url=tx_url
             )
 
             logger.info(f"Received activity for account: {message.account_id}")
 
             account_id = message.account_id
             for user in self.accounts_to_users[account_id]:
+                email = Email(user.name, user.email, account_id, tx_url)
                 user.timeline.add_event(message)
+                send_email(email)
+
 
             for user in self.starred_users:
+                email = Email(user.name, user.email, account_id, tx_url)
                 user.timeline.add_event(message)
+                send_email(email)
 
         except json.JSONDecodeError as je:
             logger.error(f"Error decoding message: {je}")

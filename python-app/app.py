@@ -1,24 +1,19 @@
 import asyncio
-import json
+import logging
 from collections import defaultdict
 from contextlib import asynccontextmanager
-from random import randint, choice
-from typing import Optional, OrderedDict
+from typing import Optional
 
 from aiokafka import AIOKafkaProducer
 from fastapi import FastAPI, Depends, Form, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
-from kafka_config import KAFKA_BOOTSTRAP_SERVERS, KAFKA_FRAUD_TOPIC
 from kafka_consumer import start_kafka_consumer
 from models import User
 from oauth import router as oauth_router
-from fastapi.responses import RedirectResponse, JSONResponse
-import logging
-
 from oauth_utils import get_current_user
-
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

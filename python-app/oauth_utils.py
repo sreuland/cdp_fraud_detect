@@ -5,9 +5,9 @@ from httpx import AsyncClient
 import logging
 from fastapi import HTTPException, Cookie
 
-logger = logging.getLogger(__name__)
+from config.config import SECRET_FILENAME
 
-SECRET_FILENAME = os.getenv("SECRET_FILE", "client_secret.json")
+logger = logging.getLogger(__name__)
 
 # Load Google OAuth configuration
 with open(SECRET_FILENAME) as f:
