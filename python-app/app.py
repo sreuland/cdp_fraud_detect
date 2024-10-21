@@ -85,7 +85,7 @@ async def dashboard(request: Request, current_user: dict = Depends(get_current_u
 
     user: Optional[User] = user_db.get(email)
 
-    logger.info(f"--------  User = {user}")
+    # logger.info(f"--------  User = {user}")
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "user": current_user,
@@ -127,7 +127,7 @@ async def set_register_for_all(request: Request, current_user: dict = Depends(ge
         # Check if the request is an AJAX request
         data = await request.json()  # Read JSON data
         register_for_all: bool = data.get("register_for_all", False)  # Extract value
-        logger.info(f"------------ data is {data}")
+        # logger.info(f"------------ data is {data}")
 
         logger.info(f"-------- register_for_all === {register_for_all}")
         user: Optional[User] = user_db.get(current_user["email"])
