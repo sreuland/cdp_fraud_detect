@@ -52,7 +52,7 @@ services:
       # set SEED_ACCOUNTS to "true" to trigger generation of four accounts 
       # on testnet and insert 3 of them into fraud accounts lookup data with 
       # unsafe/malicious tags, log to console the pub/priv key pairs for each.
-      SEED_ACCOUNTS: "true"
+      SEED_ACCOUNTS: "false"
     depends_on:
       - kafka 
       - fraud_data_fetch
