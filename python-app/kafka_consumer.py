@@ -57,13 +57,13 @@ class AccountActivityConsumer:
             for user in self.accounts_to_users[account_id]:
                 email = Email(user.name, user.email, account_id, tx_url)
                 user.timeline.add_event(message)
-                send_email(email)
+                # send_email(email)
 
 
             for user in self.starred_users:
                 email = Email(user.name, user.email, account_id, tx_url)
                 user.timeline.add_event(message)
-                send_email(email)
+                # send_email(email)
 
         except json.JSONDecodeError as je:
             logger.error(f"Error decoding message: {je}")

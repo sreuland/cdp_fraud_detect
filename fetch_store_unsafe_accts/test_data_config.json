@@ -1,35 +1,28 @@
 {
     "put_operations": {
       "addresses_to_insert": [
-        "GBBA67IJR7TG5B2FX326OJGN36XBAYM4YG35OAD4JE74C3WLKBKSKCS7",
-        "GDNKER3J26MYMME7LCV3QDEWLR45RR372C3K7QKTD3AA364OA5SFCSWT",
-        "GCMI5WCNEV4YFLLNOAE7NU7BT4VDBRMWIIVGHY5V255O23OVGHWLPPQM",
-        "GDQ3HSAALXL4624VH67VTSQW5W3OVEG4TWDYCZ2JUUOPM23W3EAODNTH"
+        "GBBVMABET5UTIJM7IPW3TUI2UXALQXXINBKYTB6PIF5QE7RB4DMYJPOF",
+        "GBQ3QCMC4LRW3JUCHORIKOTWNPQBZNWOTTIZIULMWS4VMFHRUDNHJA3R",
+        "GAUJW4CUUTBKIVUTXPQARDUSSPVDLXKMFAPAK64QWJXQ4I75C4ORQ4OR"
       ],
       "data_to_insert": [
         {
-          "address": "GBBA67IJR7TG5B2FX326OJGN36XBAYM4YG35OAD4JE74C3WLKBKSKCS7",
+          "address": "GBBVMABET5UTIJM7IPW3TUI2UXALQXXINBKYTB6PIF5QE7RB4DMYJPOF",
           "domain": "fraud_account.com",
           "name": "fraud account 1",
           "tags": ["unsafe"]
         },
         {
-          "address": "GDNKER3J26MYMME7LCV3QDEWLR45RR372C3K7QKTD3AA364OA5SFCSWT",
+          "address": "GBQ3QCMC4LRW3JUCHORIKOTWNPQBZNWOTTIZIULMWS4VMFHRUDNHJA3R",
           "domain": "bad_account.com",
           "name": "fraud account 2",
           "tags": ["malicious"]
         },
         {
-          "address": "GCMI5WCNEV4YFLLNOAE7NU7BT4VDBRMWIIVGHY5V255O23OVGHWLPPQM",
+          "address": "GAUJW4CUUTBKIVUTXPQARDUSSPVDLXKMFAPAK64QWJXQ4I75C4ORQ4OR",
           "domain": "unsafe_account.com",
           "name": "fraud account 3",
-          "tags": ["unsafe","malicious"]
-        },
-        {
-          "address": "GDQ3HSAALXL4624VH67VTSQW5W3OVEG4TWDYCZ2JUUOPM23W3EAODNTH",
-          "domain": "malicious_account.com",
-          "name": "fraud account 4",
-          "tags": ["malicious"]
+          "tags": ["unsafe,malicious"]
         }
       ]
     },
