@@ -4,22 +4,210 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Activity Page</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Poppins:wght@400&display=swap" rel="stylesheet">
     <style>
-        pre {
-            white-space: pre-wrap; /* Preserve whitespace */
-            word-wrap: break-word; /* Allow wrapping */
-            background-color: #f4f4f4; /* Light gray background */
-            padding: 10px; /* Add some padding */
-            border-radius: 5px; /* Rounded corners */
-            border: 1px solid #ccc; /* Light border */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+            background: url('/static/Data Background.jpg') no-repeat center center fixed;
+            background-size: cover;
+            position: relative;
+            color: #fdd835;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 0;
+        }
+
+        .activity-container {
+            width: 90%;
+            max-width: 1600px;
+            margin: 20px auto;
+            background-color: rgba(30, 30, 30, 0.9);
+            padding: 20px 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            position: relative;
+            z-index: 1;
+            box-sizing: border-box;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .header h1 {
+            font-family: 'Orbitron', sans-serif;
+            color: #fdd835;
+            font-size: 48px;
+            margin: 0;
+        }
+
+        .sub-heading-container {
+            position: relative;
+            height: 45px;
+            margin-bottom: -35px;
+        }
+
+        .sub-heading-text {
+            font-family: 'Poppins', sans-serif;
+            color: #fdd835;
+            font-size: 14px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2;
+            top: 3px;
+            margin-left: 5px;
+        }
+
+        .sub-heading-image {
+            position: absolute;
+            top: -74px;
+            left: 170px;
+            z-index: -1;
+        }
+
+        .sub-heading-image img {
+            height: 125px;
+            width: auto;
+        }
+
+        .scanning-animation span {
+            opacity: 0;
+            display: inline-block;
+            animation: ellipsis 1.5s infinite;
+        }
+
+        .scanning-animation span:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .scanning-animation span:nth-child(2) {
+            animation-delay: 0.5s;
+        }
+
+        .scanning-animation span:nth-child(3) {
+            animation-delay: 1s;
+        }
+
+        @keyframes ellipsis {
+            0% {
+                opacity: 0;
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+            }
+        }
+
+        pre.json-content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background-color: #333;
+            color: #fdd835;
+            padding: 30px;
+            border-radius: 10px;
+            border: 2px solid #fdd835;
+            max-height: 600px;
+            overflow-y: auto;
+            font-size: 13px;
+        }
+
+        .json-content a {
+            color: #4CAF50;
+            text-decoration: none;
+        }
+
+        .json-content a:hover {
+            text-decoration: underline;
+        }
+
+        .link-section {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .link-section a {
+            font-size: 18px;
+            color: #1e1e1e;
+            text-decoration: none;
+            padding: 15px 30px;
+            background-color: #fdd835;
+            border-radius: 10px;
+            transition: background-color 0.3s ease;
+            font-weight: bold;
+        }
+
+        .link-section a:hover {
+            background-color: #ffd700;
+            color: #1e1e1e;
+        }
+
+        .powered-by {
+            position: absolute;
+            bottom: 10px;
+            right: 20px;
+            font-size: 18px;
+            color: #fdd835;
+            font-family: 'Poppins', sans-serif;
         }
     </style>
 </head>
 <body>
-    <h1>Activity List</h1>
+    <div class="activity-container">
+        <!-- Header with Decepti-Scan Title -->
+        <div class="header">
+            <h1>Decepti-Scan</h1>
+        </div>
 
-    <pre class="json-content">{{ activities | tojson(indent=2) | safe }}</pre>
+        <!-- Scanning Fraudulent Activity with animation and image -->
+        <div class="sub-heading-container">
+            <div class="sub-heading-text">
+                Scanning Fraudulent Activity
+                <span class="scanning-animation">
+                    <span>.</span><span>.</span><span>.</span>
+                </span>
+            </div>
+            <div class="sub-heading-image">
+                <img src="/static/Scanning1.png" alt="Scanning">
+            </div>
+        </div>
 
-    <a href="/dashboard">Back to Dashboard</a>
+        <!-- JSON Content Area -->
+        <pre id="json-content" class="json-content">{{ activities | tojson(indent=2) | safe }}</pre>
+
+        <!-- Back to Dashboard Button -->
+        <div class="link-section">
+            <a href="/dashboard">Back to Dashboard</a>
+        </div>
+
+        <!-- Powered by CDP -->
+        <div class="powered-by">
+            Powered by CDP
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var jsonContent = document.getElementById('json-content');
+            var content = jsonContent.innerHTML;
+
+            content = content.replace(/"transaction_url":\s*"(.*?)"/g, '"transaction_url": "<a href="$1" target="_blank">$1</a>"');
+
+            jsonContent.innerHTML = content;
+        });
+    </script>
 </body>
 </html>

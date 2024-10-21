@@ -12,5 +12,6 @@
 # Ignore all client_secret.json files
 **/client_secret.json
 
-#Ignore log files
+#Ignore log/temp files
 *.log
+.DS_Store
