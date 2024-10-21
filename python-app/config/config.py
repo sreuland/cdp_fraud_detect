@@ -13,12 +13,12 @@ GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 
 GOOGLE_REVOKE_TOKEN_URL = "https://oauth2.googleapis.com/revoke"
 
-SMTP_USER = config["smtp"]["SMTP_USER"]
-SMTP_PASSWORD = config["smtp"]["SMTP_PASSWORD"]
-SMTP_SERVER = config["smtp"]["SMTP_SERVER"]
-SMTP_PORT = config["smtp"]["SMTP_PORT"]
-
-SENDER_NAME = "CDP Fraud Activity"
-SENDER_EMAIL = "cdp_fraud_activity@cdpfraud.org"
+# SMTP_USER = config["smtp"]["SMTP_USER"]
+# SMTP_PASSWORD = config["smtp"]["SMTP_PASSWORD"]
+# SMTP_SERVER = config["smtp"]["SMTP_SERVER"]
+# SMTP_PORT = config["smtp"]["SMTP_PORT"]
+#
+# SENDER_NAME = "CDP Fraud Activity"
+# SENDER_EMAIL = "cdp_fraud_activity@cdpfraud.org"
 
 

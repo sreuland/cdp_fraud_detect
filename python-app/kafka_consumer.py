@@ -6,7 +6,6 @@ import os
 from aiokafka import AIOKafkaConsumer
 from pydantic import  ValidationError
 
-from email_utils import send_email
 from models import User, FraudEventOut, Email
 
 # Configure logging
