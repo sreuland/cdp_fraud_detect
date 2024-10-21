@@ -1,7 +1,11 @@
 # cdp_fraud_detect, aka 'Deceptiscan', a CDP hack-a-thon exercise 
 
 ## Premise:
-Demonstrate a data pipeline which leverages [CDP](https://stellar.org/blog/developers/composable-data-platform) pre-computed ledger metadata instead of captive core for faster, lightweight access to network data, to enable application data pipelines that detect potentially fraudulent transactions that have occurred on a Stellar network in near real-time.  
+Demonstrate a data pipeline which leverages [CDP](https://stellar.org/blog/developers/composable-data-platform) pre-computed ledger metadata instead of using captive core architecture, for benefits:
+* faster application startup time, using CDP, application processes can access latest Stellar network ledger metadata in seconds, whereas captive core requires 15-30 minutes to sync to network first. 
+* lightweight host compute requirements, usingh CDP, no additional compute requirements in Storage,RAM or CPU are required on the application host, whereas captive core requires a couple hundred GB's of high throughput(IOPS), and at least a dual core CPU to support the extra o/s process to run core.
+* less client application code,  using CDP, applications can leverage streaming data helper functions such as [cdp.ApplyLedgerMetadata()](https://github.com/stellar/go/blob/master/ingest/cdp/producer.go#L89) to focus on application concerns, no ingestion infrastructure or boilerplate code required, just a pure callback for your app to receive ledger metadata.
+  
 
 ## Design proposal:
 
