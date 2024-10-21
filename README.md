@@ -1,11 +1,11 @@
 # cdp_fraud_detect, aka 'Deceptiscan', a CDP hack-a-thon exercise 
 
 ## Premise:
-Demonstrate a data pipeline which leverages [CDP](https://stellar.org/blog/developers/composable-data-platform) pre-computed ledger metadata instead of captive core for fast, lightweight access to network data, to enable  detection of potentially fraudulent transactions that have occurred on a Stellar network in near real-time.  
+Demonstrate a data pipeline which leverages [CDP](https://stellar.org/blog/developers/composable-data-platform) pre-computed ledger metadata instead of captive core for faster, lightweight access to network data, to enable application data pipelines that detect potentially fraudulent transactions that have occurred on a Stellar network in near real-time.  
 
 ## Design proposal:
 
-A distributed data pipeline, consisting of CDP as origin, Kafka as messaging middleware, and event driven microservices as processors.
+A distributed data pipeline, consisting of a CDP Datastore(GCS Bucket) as the origin of network ledger metadata, Kafka as messaging middleware, and event driven microservices as processors.
 
 ![data pipeline](./design.png)
 
