@@ -20,7 +20,6 @@ import (
 	"github.com/stellar/go/ingest/ledgerbackend"
 	"github.com/stellar/go/keypair"
 	"github.com/stellar/go/network"
-	"github.com/stellar/go/strkey"
 	"github.com/stellar/go/support/datastore"
 	"github.com/stellar/go/support/storage"
 	"github.com/stellar/go/xdr"
@@ -336,7 +335,7 @@ func main() {
 	ledgerMetadataInboundAdapter.Subscribe(fraudDetectionTransformer)
 
 	if strings.ToLower(generateSeed) == "true" {
-	    seedAccounts(lmdbPath)
+		seedAccounts(lmdbPath)
 	}
 	log.Printf("Fraud detection pipeline ended %v\n", ledgerMetadataInboundAdapter.Run(ctx))
 }
@@ -355,7 +354,7 @@ func seedAccounts(lmdbPath string) {
 		Name:    "acc 1",
 	}
 	fraudAccounts = append(fraudAccounts, acc1)
-	fmt.Printf("Generated Fake Account #1, as fraud unsafe: \npub: %v\npriv: %v\n\n", acc1Kp.Address(), strkey.MustEncode(strkey.VersionByteSeed, []byte(acc1Kp.Seed())))
+	fmt.Printf("Generated Fake Account #1, as fraud unsafe: \npub: %v\npriv: %v\n\n", acc1Kp.Address(), acc1Kp.Seed())
 
 	acc2Kp := keypair.MustRandom()
 	horizonclient.DefaultTestNetClient.Fund(acc1Kp.Address())
@@ -367,7 +366,7 @@ func seedAccounts(lmdbPath string) {
 		Name:    "acc 2",
 	}
 	fraudAccounts = append(fraudAccounts, acc2)
-	fmt.Printf("Generated Fake Account #2, as fraud malicious: \npub: %v\npriv: %v\n\n", acc2Kp.Address(), strkey.MustEncode(strkey.VersionByteSeed, []byte(acc2Kp.Seed())))
+	fmt.Printf("Generated Fake Account #2, as fraud malicious: \npub: %v\npriv: %v\n\n", acc2Kp.Address(), acc2Kp.Seed())
 
 	acc3Kp := keypair.MustRandom()
 	horizonclient.DefaultTestNetClient.Fund(acc3Kp.Address())
@@ -379,11 +378,11 @@ func seedAccounts(lmdbPath string) {
 		Name:    "acc 2",
 	}
 	fraudAccounts = append(fraudAccounts, acc3)
-	fmt.Printf("Generated Fake Account #3, as fraud malicious, unsafe: \npub: %v\npriv: %v\n\n", acc3Kp.Address(), strkey.MustEncode(strkey.VersionByteSeed, []byte(acc3Kp.Seed())))
+	fmt.Printf("Generated Fake Account #3, as fraud malicious, unsafe: \npub: %v\npriv: %v\n\n", acc3Kp.Address(), acc3Kp.Seed())
 
 	acc4Kp := keypair.MustRandom()
 	horizonclient.DefaultTestNetClient.Fund(acc4Kp.Address())
-	fmt.Printf("Generated Fake Account #4, no fraud: \npub: %v\npriv: %v\n\n", acc4Kp.Address(), strkey.MustEncode(strkey.VersionByteSeed, []byte(acc4Kp.Seed())))
+	fmt.Printf("Generated Fake Account #4, no fraud: \npub: %v\npriv: %v\n\n", acc4Kp.Address(), acc4Kp.Seed())
 
 	// create an environment and make sure it is eventually closed.
 	env, err := lmdb.NewEnv()
