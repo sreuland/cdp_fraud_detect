@@ -24,7 +24,7 @@ async def login(access_token: str = Cookie(None)):
 @router.get("/callback")
 async def callback(code: str):
     user_info, access_token = await get_google_user_info(code)
-    logger.info(f"User info retrieved: {user_info}")
+    # logger.info(f"User info retrieved: {user_info}")
 
     # Redirect to dashboard with cookie set
     response = RedirectResponse(url="/dashboard")
