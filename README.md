@@ -1,6 +1,9 @@
 # cdp_fraud_detect, aka 'Deceptiscan', a CDP hack-a-thon exercise 
 
 ## Premise:
+Fraudulent account activity can be present on any blockchain network, the challenge is how to monitor and detect this activity on the network, which is the inspiration for this PoC. 
+
+## Fraud Detection, Proof of Concept:
 Demonstrate a data pipeline which leverages [CDP](https://stellar.org/blog/developers/composable-data-platform) pre-computed ledger metadata instead of using captive core architecture, for benefits:
 * faster application startup time, using CDP, application processes can access latest Stellar network ledger metadata in seconds, whereas captive core requires 15-30 minutes to sync to network first. 
 * lightweight host compute requirements, usingh CDP, no additional compute requirements in Storage,RAM or CPU are required on the application host, whereas captive core requires a couple hundred GB's of high throughput(IOPS), and at least a dual core CPU to support the extra o/s process to run core.
