@@ -4,7 +4,7 @@
 Fraudulent account activity can be present on any blockchain network, the challenge is how to monitor and detect this activity on the network, which is the inspiration for this PoC. 
 
 ## Fraud Detection, Proof of Concept:
-Demonstrate a data pipeline which leverages [CDP](https://stellar.org/blog/developers/composable-data-platform) to acquire ledger metadata fast and easy instead of using captive core, realize the following application benefits:
+Demonstrate a data pipeline which leverages [Stellar CDP](https://stellar.org/blog/developers/composable-data-platform) to acquire Stellar blockchain ledger metadata fast and easy instead of using captive core, realize the following application benefits:
 * faster application startup time - using CDP, application processes can access latest Stellar network ledger metadata in seconds, whereas captive core requires 15-30 minutes to sync to network first. 
 * lightweight host compute requirements - using CDP, no additional compute requirements in Storage,RAM or CPU are required on the application host, whereas captive core requires a couple hundred GB's of high throughput(IOPS), and at least a dual core CPU to support the extra o/s process to run core.
 * less client application code - using CDP, applications can leverage streaming data helper functions such as [cdp.ApplyLedgerMetadata()](https://github.com/stellar/go/blob/master/ingest/cdp/producer.go#L89) to focus on application concerns, no ingestion infrastructure or boilerplate code required, just a pure callback for your app to receive ledger metadata.
@@ -12,7 +12,7 @@ Demonstrate a data pipeline which leverages [CDP](https://stellar.org/blog/devel
 
 ## Design proposal:
 
-A distributed data pipeline, consisting of a CDP Datastore(GCS Bucket) as the origin of network ledger metadata, Kafka as messaging middleware, and event driven microservices as processors.
+A distributed data pipeline, consisting of a CDP Datastore(GCS Bucket) as the origin of Stellar network ledger metadata, Kafka as messaging middleware, and event driven microservices as processors.
 
 ![data pipeline](./design.png)
 
